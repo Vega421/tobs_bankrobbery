@@ -184,6 +184,10 @@ now = now + 10000; fire(2, "TOB_fh:rewardCash")
 check("never more than the trolley holds", MONEY[2] == 60000)
 fire(2, "TOB_fh:grabDone")
 check("grab finished", Looting[2] == nil)
+-- a player joining now gets the running heist
+local joined; callbacks["TOB_fh:getBanks"](3, function(b, d, running) joined = running end)
+check("late joiner gets the running heist", joined.B1 and joined.B1.stage == "open" and joined.B1.vaultOpen == true)
+check("late joiner sees the taken trolley and the time left", joined.B1.looted.Loot1 == true and joined.B1.timeLeft > 0 and joined.F1 == nil)
 -- 9. EXPLOIT: fast pile requests can't pay faster than grabbing
 local T2 = TOB.Banks.B1.trolley2
 at(2, T2)

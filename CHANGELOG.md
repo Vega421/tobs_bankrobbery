@@ -32,6 +32,7 @@ A security and reliability update: the server now runs the whole heist, and trol
 - A warning in the console when OneSync is off (the anti-cheat needs it to check positions)
 
 **Fixes**
+- Players who join the server during a heist can loot it too (they see the taken trolleys, the deposit boxes and the countdown)
 - Nobody sees "Start bank heist" while a bank is being robbed
 - A trolley taken by two players at once no longer flags the second one as a cheater
 - The gold and diamond trolleys show their own label with ox_target

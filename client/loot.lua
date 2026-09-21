@@ -47,6 +47,28 @@ end)
 -- The vault opened: everyone can loot. The prompts run while the player is near this bank.
 RegisterNetEvent("TOB_fh:startLoot_c")
 AddEventHandler("TOB_fh:startLoot_c", function(data, bank)
+    StartLootPhase(data, bank)
+end)
+
+-- A player who joins during a heist takes part from where it is: taken trolleys, deposit boxes and the countdown
+function JoinRunningHeists(running)
+    for bank, r in pairs(running or {}) do
+        if TOB.Banks[bank] ~= nil then
+            if r.timeLeft ~= nil and (r.stage == "vaultitem" or r.stage == "open" or r.stage == "closing") then
+                TimerEnds[bank] = GetGameTimer() + r.timeLeft * 1000
+            end
+            if r.vaultOpen then
+                TOB.Banks[bank].special = r.special
+                StartLootPhase(TOB.Banks[bank], bank)
+                LootOpen[bank] = r.stage == "open"
+                for loot, _ in pairs(r.looted or {}) do LootCheck[bank][loot] = true end
+                BoxState[bank] = r.boxes
+            end
+        end
+    end
+end
+
+function StartLootPhase(data, bank)
     LootCheck[bank] = {Loot1 = false, Loot2 = false, Loot3 = false}
     LootActive[bank] = true
     LootOpen[bank] = true
@@ -97,7 +119,7 @@ AddEventHandler("TOB_fh:startLoot_c", function(data, bank)
             Citizen.Wait(sleep)
         end
     end)
-end)
+end
 
 -- The grab animation. Pays by asking the server each time a pile lands in the bag, and tells the
 -- server when the player stops (TOB_fh:grabDone).

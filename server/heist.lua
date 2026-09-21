@@ -420,8 +420,28 @@ AddEventHandler("playerDropped", function()
     end
 end)
 
+-- What a player joining during a heist needs to take part: stage, special trolleys, taken trolleys,
+-- deposit boxes and the time left on the countdown
+local function RunningHeists()
+    local list = {}
+    for bank, h in pairs(Heists) do
+        local looted, boxes = {}, {}
+        for slot, _ in pairs(h.looted) do looted["Loot" .. slot:sub(-1)] = true end
+        for box, state in pairs(h.boxes) do boxes[box] = state.opened and "opened" or "busy" end
+        list[bank] = {
+            stage = h.stage,
+            vaultOpen = VaultOpen(bank),
+            special = h.special,
+            looted = looted,
+            boxes = boxes,
+            timeLeft = h.ends and math.max(0, math.floor((h.ends - GetGameTimer()) / 1000)) or nil,
+        }
+    end
+    return list
+end
+
 Bridge.RegisterCallback("TOB_fh:getBanks", function(source, cb)
-    cb(TOB.Banks, Doors)
+    cb(TOB.Banks, Doors, RunningHeists())
 end)
 
 -- TIMELINE --
