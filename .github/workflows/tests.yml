@@ -1,0 +1,20 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.4
+        run: sudo apt-get update -q && sudo apt-get install -y -q lua5.4
+      - name: Server tests
+        run: lua5.4 tests/server_test.lua
+      - name: Bridge tests
+        run: lua5.4 tests/bridge_test.lua
+      - name: Client tests
+        run: lua5.4 tests/client_test.lua
