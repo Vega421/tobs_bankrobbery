@@ -64,7 +64,7 @@ end)
 -- STARTUP --
 
 Bridge.Init(function()
-    Bridge.TriggerCallback("TOB_fh:getBanks", function(banks, doors)
+    Bridge.TriggerCallback("TOB_fh:getBanks", function(banks, doors, running)
         TOB.Banks = banks
         Doors = doors
         for k, _ in pairs(TOB.Banks) do
@@ -75,6 +75,7 @@ Bridge.Init(function()
             RegisterTargets()
         end
         DoorThreads()
+        JoinRunningHeists(running) -- joined during a heist: take part from where it is
         Ready = true
     end)
 end)

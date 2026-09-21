@@ -59,10 +59,11 @@ local function lastServer(n) for i = #serverEvents, 1, -1 do if serverEvents[i][
 dofile("config/config.lua"); dofile("locales/locales.lua")
 -- Fake framework bridge (the real ones are tested in tests/bridge_test.lua)
 POLICE = false
+RUNNING_HEISTS = {} -- heists running when this player joins (test 10)
 Bridge = {NotifyFallback = "native",
           Init = function(cb) INITCB = cb end,
           IsPolice = function() return POLICE end,
-          TriggerCallback = function(n, cb) cb({B1 = TOB.Banks.B1, F1 = TOB.Banks.F1}, DOORS) end,
+          TriggerCallback = function(n, cb) cb({B1 = TOB.Banks.B1, F1 = TOB.Banks.F1}, DOORS, RUNNING_HEISTS) end,
           Notify = function(m) notes[#notes + 1] = m end}
 DOORS = {F1 = {{loc = TOB.Banks.F1.gate.loc, h = 1, txtloc = TOB.Banks.F1.gate.txtloc, locked = true}, {loc = TOB.Banks.F1.vault.loc, txtloc = TOB.Banks.F1.vault.txtloc, locked = false}},
          B1 = {{loc = TOB.Banks.B1.gate.loc, h = 1, txtloc = TOB.Banks.B1.gate.txtloc, locked = false}, {loc = TOB.Banks.B1.vault.loc, txtloc = TOB.Banks.B1.vault.txtloc, locked = false}}}
@@ -205,6 +206,15 @@ check("timer stored", TimerEnds.B1 ~= nil)
 handlers["TOB_fh:vaultState"]("B1", 123.0)
 check("vault angle stored", Doors.B1[2].state == 123.0)
 check("bankcoords command registered", commands[TOB.CoordsCommand] ~= nil)
+-- 10. joining the server during a heist: take part from where it is
+RUNNING_HEISTS = {B1 = {stage = "open", vaultOpen = true, special = {trolley3 = "diamond"}, looted = {Loot1 = true}, boxes = {[2] = "opened"}, timeLeft = 120},
+                  F1 = {stage = "hacking", vaultOpen = false, looted = {}, boxes = {}}}
+INITCB()
+check("late joiner can loot", LootActive.B1 == true and LootOpen.B1 == true)
+check("late joiner sees what's taken", LootCheck.B1.Loot1 == true and LootCheck.B1.Loot2 == false and BoxState.B1[2] == "opened")
+check("late joiner sees the special trolley", LootSpecial.B1.trolley3 == "diamond")
+check("late joiner sees the countdown", TimerEnds.B1 ~= nil)
+check("no loot phase before the vault opens", not LootActive.F1)
 for _, name in ipairs({"StartHeist", "StartGrab", "RequestLoot", "SpawnTrolleys", "DrillBox", "UseGate", "UseVaultItem", "ToggleDoor", "DoorThreads", "RegisterTargets", "CleanBankProps"}) do
     check(name .. " defined", rawget(_G, name) ~= nil)
 end
