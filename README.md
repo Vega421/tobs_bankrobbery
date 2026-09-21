@@ -28,8 +28,9 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 - Any hacking minigame: ox_lib's, none, or your own
 - If the robber disconnects, the nearest crew member takes over
 - Events and exports for other resources (`IsHeistActive`, `heistStarted`, ...)
-- Rewards as cash, dirty money or items; optional thermite-style vault step
-- English and Danish, easy to translate; add your own banks from the config (`/bankcoords` helps)
+- Rewards as cash, dirty money, items or marked bills; cash and cooldown per bank; optional thermite-style vault step
+- Optional GPS tracker and dye pack in the loot
+- English, Danish, German, Swedish, Norwegian and Dutch; add your own banks in `config/banks.lua` (`/bankcoords` helps)
 - Minimum crew size, one-heist-at-a-time, on-duty police only, and no heists right before a restart
 - Almost no performance cost when nobody is near a bank
 

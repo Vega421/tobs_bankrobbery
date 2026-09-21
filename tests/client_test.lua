@@ -19,7 +19,13 @@ end})
 local handlers, serverEvents, zones, notes, commands, exportCalls, printed = {}, {}, {}, {}, {}, {}, {}
 local threads = {}
 local clock = 0
-Citizen = {CreateThread = function(fn) threads[#threads + 1] = fn end, Wait = function() end}
+-- STOPWAIT makes Wait() stop a thread, so one pass of a "while true" loop can be run with pcall
+STOPWAIT = false
+Citizen = {CreateThread = function(fn) threads[#threads + 1] = fn end, Wait = function() if STOPWAIT then error("stop") end end}
+function GetPlayerServerId() return 7 end
+function PlayerId() return 1 end
+function GetPlayerFromServerId(id) return id == 99 and -1 or id end
+function GetPlayerPed(p) return p end
 function GetGameTimer() clock = clock + 100; return clock end
 function SetTimeout() end
 function RegisterNetEvent() end
@@ -56,7 +62,7 @@ end
 local function lastExport(fn) for i = #exportCalls, 1, -1 do if exportCalls[i].fn == fn then return exportCalls[i] end end end
 local function lastServer(n) for i = #serverEvents, 1, -1 do if serverEvents[i][1] == n then return serverEvents[i] end end end
 
-dofile("config/config.lua"); dofile("locales/locales.lua")
+dofile("config/config.lua"); dofile("config/banks.lua"); dofile("locales/locales.lua")
 -- Fake framework bridge (the real ones are tested in tests/bridge_test.lua)
 POLICE = false
 RUNNING_HEISTS = {} -- heists running when this player joins (test 10)
@@ -67,7 +73,7 @@ Bridge = {NotifyFallback = "native",
           Notify = function(m) notes[#notes + 1] = m end}
 DOORS = {F1 = {{loc = TOB.Banks.F1.gate.loc, h = 1, txtloc = TOB.Banks.F1.gate.txtloc, locked = true}, {loc = TOB.Banks.F1.vault.loc, txtloc = TOB.Banks.F1.vault.txtloc, locked = false}},
          B1 = {{loc = TOB.Banks.B1.gate.loc, h = 1, txtloc = TOB.Banks.B1.gate.txtloc, locked = false}, {loc = TOB.Banks.B1.vault.loc, txtloc = TOB.Banks.B1.vault.txtloc, locked = false}}}
-for _, f in ipairs({"client/util.lua", "client/heist.lua", "client/loot.lua", "client/boxes.lua", "client/police.lua", "client/doors.lua", "client/main.lua"}) do
+for _, f in ipairs({"client/util.lua", "client/heist.lua", "client/loot.lua", "client/boxes.lua", "client/police.lua", "client/tracker.lua", "client/doors.lua", "client/main.lua"}) do
     dofile(f)
 end
 
@@ -215,6 +221,42 @@ check("late joiner sees what's taken", LootCheck.B1.Loot1 == true and LootCheck.
 check("late joiner sees the special trolley", LootSpecial.B1.trolley3 == "diamond")
 check("late joiner sees the countdown", TimerEnds.B1 ~= nil)
 check("no loot phase before the vault opens", not LootActive.F1)
+-- 11. GPS tracker (police) and dye pack
+POLICE = true
+local blipsBefore = CALLS.AddBlipForCoord or 0
+handlers["TOB_fh:trackerPos"](12, vector3(10, 20, 30), 120)
+check("tracker blip for police", CALLS.AddBlipForCoord == blipsBefore + 1 and notes[#notes] == L("tracker_police", 120))
+handlers["TOB_fh:trackerPos"](12, vector3(11, 20, 30), 115)
+check("tracker blip moves, no second blip", CALLS.AddBlipForCoord == blipsBefore + 1 and (CALLS.SetBlipCoords or 0) >= 1)
+local removed = CALLS.RemoveBlip or 0
+handlers["TOB_fh:trackerEnd"](12)
+check("tracker blip removed", CALLS.RemoveBlip == removed + 1)
+POLICE = false
+handlers["TOB_fh:trackerPos"](13, vector3(10, 20, 30), 120)
+check("no tracker blip for robbers", CALLS.AddBlipForCoord == blipsBefore + 1)
+handlers["TOB_fh:trackerWarn"]()
+check("robber warned", notes[#notes] == L("tracker_warn"))
+handlers["TOB_fh:dyePack"](7, 10)
+check("dye pack: the robber is told", notes[#notes] == L("dye_pack"))
+check("dye pack: red smoke", (CALLS.StartParticleFxLoopedOnEntity or 0) == 1)
+handlers["TOB_fh:dyePack"](99, 10)
+check("dye pack on someone out of range: nothing", (CALLS.StartParticleFxLoopedOnEntity or 0) == 1)
+
+-- 12. the gate uses GTA's door system
+local gateThread = #threads + 1
+DoorThreads()
+GetClosestObjectOfType = function() return 55 end
+PEDPOS = TOB.Banks.F1.gate.loc
+STOPWAIT = true; pcall(threads[gateThread]); STOPWAIT = false
+check("gate registered in the door system", (CALLS.AddDoorToSystem or 0) == 1)
+local applied = CALLS.DoorSystemSetDoorState or 0
+check("gate lock applied", applied >= 1)
+handlers["TOB_fh:toggleDoor"]("F1", false)
+check("gate unlock applied at once", CALLS.DoorSystemSetDoorState == applied + 1 and Doors.F1[1].locked == false)
+STOPWAIT = true; pcall(threads[gateThread]); STOPWAIT = false
+check("gate registered only once", CALLS.AddDoorToSystem == 1)
+GetClosestObjectOfType = function() return 0 end
+
 for _, name in ipairs({"StartHeist", "StartGrab", "RequestLoot", "SpawnTrolleys", "DrillBox", "UseGate", "UseVaultItem", "ToggleDoor", "DoorThreads", "RegisterTargets", "CleanBankProps"}) do
     check(name .. " defined", rawget(_G, name) ~= nil)
 end

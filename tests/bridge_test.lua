@@ -38,7 +38,7 @@ local function load(side, resources, config)
     running, handlers, sent, printed = {}, {}, {}, {}
     for _, r in ipairs(resources) do running[r] = true end
     Bridge, Framework = nil, nil
-    dofile("config/config.lua")
+    dofile("config/config.lua"); dofile("config/banks.lua")
     for k, v in pairs(config or {}) do TOB[k] = v end
     dofile("bridge/framework.lua")
     dofile(side .. "/callbacks.lua")
@@ -61,8 +61,9 @@ local oxInventory = {
         INV[src][item] = INV[src][item] - n; return true
     end,
     CanCarryItem = function() return FITS end,
-    AddItem = function(src, item, n)
+    AddItem = function(src, item, n, metadata)
         if not FITS then return false, "inventory_full" end
+        LASTMETA = metadata
         added(src, item, n); return true
     end,
 }
@@ -106,6 +107,8 @@ FAKE.qbx_core = {
 FAKE.ox_inventory = oxInventory
 load("server", {"qbx_core", "qb-core", "ox_inventory"}) -- qbx_core also provides qb-core
 serverChecks("qbox", "black_money", false, true)
+Bridge.AddItem(1, "markedbills", 1, {worth = 7000})
+check("qbox: item metadata to ox_inventory", LASTMETA and LASTMETA.worth == 7000 and Bridge.Metadata == true)
 TOB.PoliceOnDuty = false
 check("qbox: off-duty police counted when PoliceOnDuty is off", Bridge.CountPolice() == 2)
 
@@ -131,6 +134,7 @@ FAKE.es_extended = {getSharedObject = function()
 end}
 load("server", {"es_extended"})
 serverChecks("esx", nil, true, true) -- ESX has no duty: both police players count
+check("esx: no item metadata", Bridge.Metadata == nil)
 
 ---------------------------------------------------------------- QBCore with qb-inventory
 reset()
@@ -144,13 +148,16 @@ FAKE["qb-inventory"] = {
     GetItemCount = function(src, item) return INV[src][item] or 0 end,
     RemoveItem = function(src, item, n) INV[src][item] = INV[src][item] - n; return true end,
     CanAddItem = function() return FITS end,
-    AddItem = function(src, item, n)
+    AddItem = function(src, item, n, slot, info)
         if not FITS then return false end
+        LASTMETA = info
         added(src, item, n); return true
     end,
 }
 load("server", {"qb-core", "qb-inventory"})
 serverChecks("qb", "black_money", false, true)
+Bridge.AddItem(1, "markedbills", 1, {worth = 5000})
+check("qb: item metadata as qb-inventory info", LASTMETA and LASTMETA.worth == 5000 and Bridge.Metadata == true)
 
 -- older qb-core without qb-inventory exports: items on the player
 reset()

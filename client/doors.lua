@@ -1,7 +1,22 @@
 -- The gate and the vault door: kept in the right state for everyone, and police lock/unlock prompts.
+-- The gate uses GTA's door system, registered locally for each player; the server decides if it's locked.
+
+local gateRegistered = {} -- [bank] = true once the gate is in the door system
+
+local function GateDoorHash(bank)
+    return GetHashKey("tobs_bankrobbery_gate_" .. bank)
+end
+
+-- Applies the server's locked state to the gate (1 = locked, 0 = unlocked)
+local function ApplyGate(bank)
+    if gateRegistered[bank] then
+        DoorSystemSetDoorState(GateDoorHash(bank), Doors[bank][1].locked and 1 or 0, false, false)
+    end
+end
 
 function DoorThreads()
-    -- Keeps the gate frozen (locked) and at the right angle while players are near
+    -- Registers the gate when the player comes near, and keeps its lock state applied
+    -- (the game only applies it once the door's physics are loaded)
     Citizen.CreateThread(function()
         while true do
             local near = false
@@ -10,16 +25,18 @@ function DoorThreads()
             for k, v in pairs(Doors) do
                 if #(pcoords - v[1].loc) < 60.0 then
                     near = true
-                    if v[1].obj == nil or not DoesEntityExist(v[1].obj) then
-                        v[1].obj = GetClosestObjectOfType(v[1].loc, 1.5, GateModel(k), false, false, false)
+                    if not gateRegistered[k] then
+                        local obj = GetClosestObjectOfType(v[1].loc.x, v[1].loc.y, v[1].loc.z, 1.5, GateModel(k), false, false, false)
+                        if obj ~= 0 then
+                            local c = GetEntityCoords(obj)
+                            AddDoorToSystem(GateDoorHash(k), GateModel(k), c.x, c.y, c.z, false, false, false)
+                            gateRegistered[k] = true
+                        end
                     end
-                    FreezeEntityPosition(v[1].obj, v[1].locked)
-                    if v[1].locked then
-                        SetEntityHeading(v[1].obj, v[1].h)
-                    end
+                    ApplyGate(k)
                 end
             end
-            Citizen.Wait(near and 200 or 2000)
+            Citizen.Wait(near and 1000 or 3000)
         end
     end)
 
@@ -86,6 +103,7 @@ RegisterNetEvent("TOB_fh:toggleDoor")
 AddEventHandler("TOB_fh:toggleDoor", function(key, state)
     if Doors[key] ~= nil then
         Doors[key][1].locked = state
+        ApplyGate(key)
     end
     DoorBusy = false
 end)

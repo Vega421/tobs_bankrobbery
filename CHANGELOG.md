@@ -31,13 +31,23 @@ A security and reliability update: the server now runs the whole heist, and trol
 - Police see the bank's blip for the whole heist, also officers who go on duty during it
 - A warning in the console when OneSync is off (the anti-cheat needs it to check positions)
 
+**More**
+- **GPS tracker** in the loot (`TOB.Tracker`, off by default): police follow the robber on the map for a while after the grab
+- **Dye pack** in the loot (`TOB.DyePack`, off by default): red smoke, part of the money ruined and the rest paid as dirty money
+- **Marked bills** (`TOB.MarkedBills`): each trolley pays one `markedbills` item with its value as `worth`, for QBCore / Qbox laundering
+- **Per-bank cash and cooldown:** set `cash` and `cooldown` on a bank. Fleeca trolleys now hold $30,000–50,000
+- **Trolleys spawned by the server** when OneSync is on (`TOB.TrolleySpawn`), so they stay when the leader leaves
+- **The gate uses GTA's door system** instead of freezing the door every few frames: cheaper and in sync for everyone
+- **Banks moved to `config/banks.lua`**, so the main config is short
+- **4 more languages:** German (`de`), Swedish (`sv`), Norwegian (`no`) and Dutch (`nl`)
+
 **Fixes**
 - Players who join the server during a heist can loot it too (they see the taken trolleys, the deposit boxes and the countdown)
 - Nobody sees "Start bank heist" while a bank is being robbed
 - A trolley taken by two players at once no longer flags the second one as a cheater
 - The gold and diamond trolleys show their own label with ox_target
 
-**Updating from 2.0.0:** replace the whole folder, then copy your settings into the new `config/config.lua` (new: `TOB.TrolleyCash`, `TOB.GrabTime`, `TOB.HackMinigame`, `TOB.Prompts`, `TOB.Dispatch`) and `config/config_server.lua` (new: `SV.DispatchAlert`).
+**Updating from 2.0.0:** replace the whole folder, then copy your settings into the new `config/config.lua` (new: `TOB.TrolleyCash`, `TOB.GrabTime`, `TOB.HackMinigame`, `TOB.Prompts`, `TOB.Dispatch`, `TOB.MarkedBills`, `TOB.Tracker`, `TOB.DyePack`, `TOB.TrolleySpawn`) and `config/config_server.lua` (new: `SV.DispatchAlert`). Custom banks go in the new `config/banks.lua`.
 
 ## 2.0.0 · 2026-09-21
 

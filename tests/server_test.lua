@@ -30,6 +30,13 @@ function SetResourceKvpInt(k, v) kvp[k] = v end
 function GetResourceKvpInt(k) return kvp[k] end
 function PerformHttpRequest(url, cb, method, body) http[#http + 1] = {url = url, cb = cb, method = method, body = body} end
 function RegisterCommand(name, fn) commands[name] = fn end
+-- server-side objects (trolleys spawned by the server)
+local objects, deleted = {}, {}
+function CreateObject(model, x, y, z) objects[#objects + 1] = {model = model, x = x}; return 900 + #objects end
+function SetEntityHeading() end
+function DoesEntityExist(obj) return deleted[obj] == nil end
+function DeleteEntity(obj) deleted[obj] = true end
+function GetHashKey(s) return #s end
 exports = setmetatable({}, {__call = function(_, name, fn) exported[name] = fn end})
 json = {encode = function() return "{}" end, decode = function(s) return {tag_name = s, html_url = "https://x"} end}
 local threads = {}
@@ -50,27 +57,33 @@ function Bridge.RemoveItem(src, item, n)
     return true
 end
 function Bridge.CanCarry() return CANCARRY end
-function Bridge.AddItem(src, item, n)
+function Bridge.AddItem(src, item, n, metadata)
     if not CANCARRY then return false end
+    if metadata then METADATA[#METADATA + 1] = {src = src, item = item, n = n, metadata = metadata} end
     ITEMS[src] = ITEMS[src] or {}
     ITEMS[src][item] = (ITEMS[src][item] or 0) + n
     return true
 end
-function Bridge.AddMoney(src, amount) MONEY[src] = (MONEY[src] or 0) + amount end
+DIRTY = {}; METADATA = {}
+function Bridge.AddMoney(src, amount, dirty)
+    MONEY[src] = (MONEY[src] or 0) + amount
+    if dirty then DIRTY[src] = (DIRTY[src] or 0) + amount end
+end
 local callbacks = {}
 function Bridge.RegisterCallback(name, fn) callbacks[name] = fn end
 
 -- LOAD THE SCRIPT --
-dofile("config/config.lua"); dofile("locales/locales.lua"); dofile("config/config_server.lua")
+dofile("config/config.lua"); dofile("config/banks.lua"); dofile("locales/locales.lua"); dofile("config/config_server.lua")
 TOB.Banks.F6.enabled = false
 TOB.Banks.BROKEN = {label = "Broken bank", doors = {}}   -- missing settings: must be skipped, not crash
 TOB.TrolleyCash = {min = 60000, max = 60000}              -- fixed so payouts can be checked exactly
+for _, b in pairs(TOB.Banks) do b.cash = nil end        -- every bank pays TOB.TrolleyCash; test 27 sets one
 TOB.SpecialTrolleyChance = 0  -- random gold/diamond trolleys would make payout checks flaky; test 19 turns them on
 SV.Webhook = "https://discord.test/hook"
 local dispatched = nil
 SV.DispatchAlert = function(bank, coords, src) dispatched = {bank = bank, src = src} end
 kvp["lastrobbed:F2"] = os.time() -- a cooldown saved before a restart
-for _, f in ipairs({"server/util.lua", "server/heist.lua", "server/loot.lua", "server/boxes.lua", "server/doors.lua", "server/admin.lua", "server/api.lua"}) do
+for _, f in ipairs({"server/util.lua", "server/heist.lua", "server/loot.lua", "server/tracker.lua", "server/boxes.lua", "server/doors.lua", "server/admin.lua", "server/api.lua"}) do
     dofile(f)
 end
 
@@ -455,6 +468,100 @@ http[#http].cb(200, "v2.1.0")
 check("up to date printed", printed[#printed]:find("up to date"))
 local got; callbacks["TOB_fh:getBanks"](1, function(b, d) got = d end)
 check("doors built from the config", got.B1[1].h == 42.639282226562 and got.B1[2].loc.y > 6475 and got.F6 == nil)
+
+
+-- 27. per-bank cash and cooldown
+TOB.Banks.F1.cash = {min = 40000, max = 40000}
+openHeist("F1", 1)
+at(2, TOB.Banks.F1.trolley1); local m27 = MONEY[2] or 0
+fire(2, "TOB_fh:lootup", "F1", "Loot1"); now = now + 40000; fire(2, "TOB_fh:grabDone")
+check("bank's own cash per trolley", MONEY[2] - m27 == 40000)
+commands[SV.ResetCommand](0, {})
+TOB.Banks.F1.cash = nil
+TOB.Banks.F1.lastrobbed = os.time() - 100
+at(1, start("F1")); INV[1].id_card_f = 1; now = now + 3000; clear()
+fire(1, "TOB_fh:startcheck", "F1")
+check("default cooldown still running", last("TOB_fh:outcome").args[1] == false)
+TOB.Banks.F1.cooldown = 60; now = now + 3000; clear()
+fire(1, "TOB_fh:startcheck", "F1")
+check("bank's own cooldown", last("TOB_fh:outcome").args[1] == true)
+TOB.Banks.F1.cooldown = nil
+commands[SV.ResetCommand](0, {})
+
+-- 28. trolleys spawned by the server
+TOB.TrolleySpawn = "server"
+openHeist("B1", 1)
+check("server spawns the trolleys", #objects == 3 and last("TOB_fh:vaultOpened").args[4] == true)
+check("gold/diamond fall back to a cash trolley below game build 2060", objects[1].model == #"hei_prop_hei_cash_trolly_01")
+at(2, start("B1")); at(3, vector3(0, 0, 1)); clear()
+fire(1, "playerDropped")
+check("takeover knows the server has the trolleys", last("TOB_fh:takeover").args[2].serverTrolleys == true)
+commands[SV.ResetCommand](0, {})
+check("server trolleys removed when the heist ends", deleted[901] and deleted[902] and deleted[903])
+TOB.TrolleySpawn = "client"
+openHeist("B1", 1)
+check("client spawn mode: no server trolleys", #objects == 3 and last("TOB_fh:vaultOpened").args[4] == false)
+commands[SV.ResetCommand](0, {})
+
+-- 29. marked bills: one item per trolley with its value
+TOB.MarkedBills = true; Bridge.Metadata = true; METADATA = {}
+openHeist("B1", 1)
+at(2, TOB.Banks.B1.trolley1); local m29 = MONEY[2] or 0; clear()
+fire(2, "TOB_fh:lootup", "B1", "Loot1")
+now = now + 18500; fire(2, "TOB_fh:rewardCash")
+check("marked bills: nothing paid while grabbing", (MONEY[2] or 0) == m29 and #METADATA == 0 and last("TOB_fh:grabbed").args[1] == 30000)
+now = now + 30000; fire(2, "TOB_fh:grabDone")
+check("marked bills: one bag with the trolley's worth", #METADATA == 1 and METADATA[1].item == "markedbills" and METADATA[1].n == 1 and METADATA[1].metadata.worth == 60000)
+at(2, TOB.Banks.B1.trolley2); CANCARRY = false; local d29 = DIRTY[2] or 0
+fire(2, "TOB_fh:lootup", "B1", "Loot2"); now = now + 40000; fire(2, "TOB_fh:rewardCash"); fire(2, "TOB_fh:grabDone")
+check("marked bills: no room -> paid as dirty money", DIRTY[2] - d29 == 60000)
+CANCARRY = true
+Bridge.Metadata = nil; at(2, TOB.Banks.B1.trolley3); local m29b = MONEY[2]
+fire(2, "TOB_fh:lootup", "B1", "Loot3"); now = now + 40000; fire(2, "TOB_fh:grabDone")
+check("marked bills without metadata support: cash", MONEY[2] - m29b == 60000)
+TOB.MarkedBills = false
+commands[SV.ResetCommand](0, {})
+
+-- 30. dye pack
+TOB.DyePack.enabled = true; TOB.DyePack.chance = 100
+openHeist("B1", 1)
+at(2, TOB.Banks.B1.trolley1); local m30, d30 = MONEY[2], DIRTY[2] or 0; clear()
+fire(2, "TOB_fh:lootup", "B1", "Loot1"); now = now + 40000; fire(2, "TOB_fh:grabDone")
+check("dye pack ruins part of the money", MONEY[2] - m30 == 45000)
+check("dye pack: the rest is dirty money", DIRTY[2] - d30 == 45000)
+check("dye pack bursts when grabbing ends", last("TOB_fh:dyePack").args[1] == 2 and last("TOB_fh:dyePack").target == -1)
+TOB.DyePack.enabled = false
+commands[SV.ResetCommand](0, {})
+
+-- 31. GPS tracker
+TOB.Tracker.enabled = true; TOB.Tracker.chance = 100
+openHeist("B1", 1)
+at(2, TOB.Banks.B1.trolley1); POLICE[3] = true; clear()
+fire(2, "TOB_fh:lootup", "B1", "Loot1"); now = now + 40000; fire(2, "TOB_fh:grabDone")
+check("robber warned about the tracker", last("TOB_fh:trackerWarn").target == 2)
+at(2, vector3(500, 500, 30)); clear(); tick(1000)
+check("police get the robber's position", last("TOB_fh:trackerPos").target == 3 and last("TOB_fh:trackerPos").args[1] == 2 and last("TOB_fh:trackerPos").args[2].x == 500)
+check("only police get it", count("TOB_fh:trackerPos") == 1)
+clear(); tick(1000)
+check("position updates every interval", last("TOB_fh:trackerPos") == nil)
+clear(); tick(TOB.Tracker.duration * 1000)
+check("tracker stops after its time", last("TOB_fh:trackerEnd") ~= nil)
+commands[SV.ResetCommand](0, {})
+openHeist("B1", 1)
+at(2, TOB.Banks.B1.trolley1); fire(2, "TOB_fh:lootup", "B1", "Loot1"); now = now + 40000; fire(2, "TOB_fh:grabDone")
+clear(); fire(2, "playerDropped")
+check("tracker stops when the robber leaves", last("TOB_fh:trackerEnd") ~= nil)
+TOB.Tracker.enabled = false; POLICE[3] = nil
+commands[SV.ResetCommand](0, {})
+
+-- 32. a heist ending mid-grab still hands out marked bills
+TOB.MarkedBills = true; Bridge.Metadata = true; METADATA = {}
+openHeist("B1", 1)
+at(2, TOB.Banks.B1.trolley1); fire(2, "TOB_fh:lootup", "B1", "Loot1")
+now = now + 18500; fire(2, "TOB_fh:rewardCash")
+commands[SV.ResetCommand](0, {})
+check("grab finished when the heist ends", #METADATA == 1 and METADATA[1].metadata.worth == 30000 and Looting[2] == nil)
+TOB.MarkedBills = false; Bridge.Metadata = nil
 
 realprint(("%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

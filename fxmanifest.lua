@@ -9,6 +9,7 @@ repository "https://github.com/Vega421/tobs_bankrobbery"
 
 shared_scripts {
     "config/config.lua",
+    "config/banks.lua",
     "locales/locales.lua",
     "bridge/framework.lua",
 }
@@ -24,6 +25,7 @@ client_scripts {
     "client/loot.lua",
     "client/boxes.lua",
     "client/police.lua",
+    "client/tracker.lua",
     "client/doors.lua",
     "client/main.lua",
 }
@@ -38,6 +40,7 @@ server_scripts {
     "server/util.lua",
     "server/heist.lua",
     "server/loot.lua",
+    "server/tracker.lua",
     "server/boxes.lua",
     "server/doors.lua",
     "server/admin.lua",
