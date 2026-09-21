@@ -228,8 +228,8 @@ end
 
 -- The vault opened: the leader spawns the trolleys
 RegisterNetEvent("TOB_fh:vaultOpened")
-AddEventHandler("TOB_fh:vaultOpened", function(bank, special, looted)
-    SpawnTrolleys(bank, special, looted)
+AddEventHandler("TOB_fh:vaultOpened", function(bank, special, looted, serverTrolleys)
+    if not serverTrolleys then SpawnTrolleys(bank, special, looted) end -- with OneSync the server spawns them
     if special ~= nil and next(special) ~= nil then
         Notify("inform", L("special_trolley"), 7000)
     end
@@ -279,7 +279,7 @@ AddEventHandler("TOB_fh:takeover", function(bank, info)
         AwaitingVault[bank] = true
         Notify("inform", L("use_vault_item", TOB.VaultItemLabel), 10000)
     elseif info.stage == "open" then
-        SpawnTrolleys(bank, info.special, info.looted)
+        if not info.serverTrolleys then SpawnTrolleys(bank, info.special, info.looted) end
         if TOB.Banks[bank].doors.secondloc ~= nil and not info.gateOpen then
             AwaitingGate[bank] = true
             Notify("inform", L("gate_hint"), 8000)

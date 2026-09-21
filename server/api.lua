@@ -44,7 +44,7 @@ end)
 exports("GetBanks", function()
     local list = {}
     for bank, b in pairs(TOB.Banks) do
-        local left = math.max(0, TOB.cooldown - (os.time() - b.lastrobbed))
+        local left = math.max(0, BankCooldown(bank) - (os.time() - b.lastrobbed))
         list[#list + 1] = {bank = bank, label = b.label, active = Heists[bank] ~= nil, cooldownLeft = left}
     end
     table.sort(list, function(a, b) return a.bank < b.bank end)

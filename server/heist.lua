@@ -22,15 +22,20 @@ for bank, b in pairs(TOB.Banks) do
     if b.enabled == false then
         TOB.Banks[bank] = nil
     elseif #missing > 0 then
-        print(("^1[tobs_bankrobbery] Bank %s is missing %s and was skipped. Check config/config.lua.^7"):format(bank, table.concat(missing, ", ")))
+        print(("^1[tobs_bankrobbery] Bank %s is missing %s and was skipped. Check config/banks.lua.^7"):format(bank, table.concat(missing, ", ")))
         TOB.Banks[bank] = nil
     end
 end
 TOB.TrolleyCash = TOB.TrolleyCash or {min = 50000, max = 80000}
-if TOB.TrolleyCash.min > TOB.TrolleyCash.max then
-    print("^3[tobs_bankrobbery] TOB.TrolleyCash.min is higher than max, so they were swapped.^7")
-    TOB.TrolleyCash.min, TOB.TrolleyCash.max = TOB.TrolleyCash.max, TOB.TrolleyCash.min
+-- min and max in the wrong order are swapped (TOB.TrolleyCash and each bank's cash)
+local function CheckRange(range, name)
+    if range ~= nil and range.min > range.max then
+        print(("^3[tobs_bankrobbery] %s.min is higher than max, so they were swapped.^7"):format(name))
+        range.min, range.max = range.max, range.min
+    end
 end
+CheckRange(TOB.TrolleyCash, "TOB.TrolleyCash")
+for bank, b in pairs(TOB.Banks) do CheckRange(b.cash, "TOB.Banks." .. bank .. ".cash") end
 if TOB.mincash ~= nil or TOB.maxcash ~= nil or TOB.MaxPiles ~= nil then
     print("^3[tobs_bankrobbery] TOB.mincash, TOB.maxcash and TOB.MaxPiles are no longer used. Trolleys pay TOB.TrolleyCash each; see the changelog for 2.1.0.^7")
 end
@@ -88,8 +93,59 @@ function VaultOpen(bank)
     return h ~= nil and h.vaultOpen == true and Doors[bank][2].locked == false
 end
 
+-- Per-bank values: a bank's own cash / cooldown, or the global TOB.TrolleyCash / TOB.cooldown
+function BankCooldown(bank)
+    return TOB.Banks[bank].cooldown or TOB.cooldown
+end
+
+function BankCash(bank)
+    return TOB.Banks[bank].cash or TOB.TrolleyCash
+end
+
 local function CooldownLeft(bank)
-    return Clock(TOB.cooldown - (os.time() - TOB.Banks[bank].lastrobbed))
+    return Clock(BankCooldown(bank) - (os.time() - TOB.Banks[bank].lastrobbed))
+end
+
+-- TROLLEYS SPAWNED BY THE SERVER (TOB.TrolleySpawn) --
+-- With OneSync the server creates the trolleys, so they stay when the leader leaves.
+
+function ServerTrolleys()
+    local mode = TOB.TrolleySpawn or "auto"
+    if mode == "server" then return true end
+    return mode == "auto" and GetConvar("onesync", "off") ~= "off"
+end
+
+-- Gold and diamond trolley models are from game build 2060. On older builds a cash trolley is used
+-- (it still pays the gold/diamond multiplier).
+local function ServerTrolleyModel(kind)
+    local s = kind and TOB.SpecialTrolleys and TOB.SpecialTrolleys[kind]
+    if s and (tonumber(GetConvar("sv_enforceGameBuild", "0")) or 0) >= 2060 then
+        return type(s.model) == "number" and s.model or GetHashKey(s.model)
+    end
+    return GetHashKey("hei_prop_hei_cash_trolly_01")
+end
+
+local function SpawnServerTrolleys(bank)
+    local h = Heists[bank]
+    h.objects = {}
+    for i = 1, 3 do
+        local slot = "trolley" .. i
+        local t = TOB.Banks[bank][slot]
+        if not h.looted[slot] then
+            local obj = CreateObject(ServerTrolleyModel(h.special and h.special[slot]), t.x, t.y, t.z, true, true, false)
+            if obj ~= nil and obj ~= 0 then
+                SetEntityHeading(obj, t.h + 0.0)
+                h.objects[#h.objects + 1] = obj
+            end
+        end
+    end
+end
+
+local function DeleteServerTrolleys(h)
+    for _, obj in ipairs(h.objects or {}) do
+        if DoesEntityExist(obj) then DeleteEntity(obj) end
+    end
+    h.objects = nil
 end
 
 local function AnyHeistActive()
@@ -145,6 +201,7 @@ end
 
 -- Ends the heist. cooldown = false (admin reset) lets the bank be robbed again straight away.
 function EndHeist(bank, reason, cooldown)
+    FinishBankGrabs(bank) -- grabs still running are paid out first
     local h = Heists[bank]
     if h ~= nil then
         local lines, totalWorth, totalCash = {}, 0, 0
@@ -167,6 +224,7 @@ function EndHeist(bank, reason, cooldown)
         Log("Heist ended: " .. BankName(bank), ("Reason: %s\nDuration: %s\nTotal: $%s\n%s"):format(
             reason, Duration(os.time() - h.started), Money(totalWorth), #lines > 0 and table.concat(lines, "\n") or "Nobody was paid."), 15105570)
         HeistEnded(bank, reason, totalWorth)
+        DeleteServerTrolleys(h)
     end
 
     TOB.Banks[bank].lastrobbed = cooldown == false and 0 or os.time()
@@ -180,9 +238,6 @@ function EndHeist(bank, reason, cooldown)
     Heists[bank] = nil
     TriggerClientEvent("TOB_fh:bankState", -1, bank, false)
     TriggerClientEvent("TOB_fh:boxesReset", -1, bank)
-    for id, g in pairs(Looting) do
-        if g.bank == bank then Looting[id] = nil end
-    end
     if GateLockedByDefault(bank) and not Doors[bank][1].locked then
         Doors[bank][1].locked = true
         TriggerClientEvent("TOB_fh:toggleDoor", -1, bank, true)
@@ -207,7 +262,9 @@ function OpenVault(bank)
     TriggerClientEvent("TOB_fh:toggleVault", -1, bank, false)
     SetStage(bank, "open", TOB.timer * 1000)
     TOB.Banks[bank].special = h.special
-    TriggerClientEvent("TOB_fh:vaultOpened", h.owner, bank, h.special, h.looted)
+    h.serverTrolleys = ServerTrolleys()
+    if h.serverTrolleys then SpawnServerTrolleys(bank) end
+    TriggerClientEvent("TOB_fh:vaultOpened", h.owner, bank, h.special, h.looted, h.serverTrolleys)
     TriggerClientEvent("TOB_fh:startLoot_c", -1, TOB.Banks[bank], bank)
     TriggerEvent("tobs_bankrobbery:vaultOpened", bank)
 end
@@ -256,6 +313,7 @@ local function Handover(bank, oldOwner)
         gateOpen = h.gateOpen == true or h.gateAt ~= nil,
         special = h.special,
         looted = h.looted,
+        serverTrolleys = h.serverTrolleys == true,
     })
     Log("Heist handed over: " .. BankName(bank), PlayerLabel(best) .. " now leads the heist.", 16740396)
     return true
@@ -305,7 +363,7 @@ AddEventHandler("TOB_fh:startcheck", function(bank)
         TriggerClientEvent("TOB_fh:outcome", _source, false, L("no_card"))
     elseif Heists[bank] ~= nil then
         TriggerClientEvent("TOB_fh:outcome", _source, false, L("busy"))
-    elseif (os.time() - TOB.cooldown) <= TOB.Banks[bank].lastrobbed then
+    elseif (os.time() - BankCooldown(bank)) <= TOB.Banks[bank].lastrobbed then
         TriggerClientEvent("TOB_fh:outcome", _source, false, L("cooldown", CooldownLeft(bank)))
     elseif not Bridge.RemoveItem(_source, "id_card_f", 1) then
         TriggerClientEvent("TOB_fh:outcome", _source, false, L("no_card"))
@@ -411,6 +469,7 @@ AddEventHandler("playerDropped", function()
     local _source = source
 
     Looting[_source] = nil
+    StopTracker(_source)
     DropBoxes(_source)
     ForgetPlayer(_source)
     for bank, h in pairs(Heists) do
@@ -512,6 +571,7 @@ function HeistTick()
         end
     end
     DropStaleGrabs(now)
+    TrackerTick(now)
 end
 
 Citizen.CreateThread(function()

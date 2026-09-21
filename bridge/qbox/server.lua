@@ -28,9 +28,11 @@ function Bridge.CanCarry(src, item, count)
     return exports.ox_inventory:CanCarryItem(src, item, count) == true
 end
 
-function Bridge.AddItem(src, item, count)
-    return exports.ox_inventory:AddItem(src, item, count) == true
+-- metadata (optional) is stored on the item, e.g. {worth = 50000} for marked bills
+function Bridge.AddItem(src, item, count, metadata)
+    return exports.ox_inventory:AddItem(src, item, count, metadata) == true
 end
+Bridge.Metadata = true
 
 function Bridge.AddMoney(src, amount, dirty)
     if dirty then return Bridge.AddItem(src, BlackMoneyItem(), amount) end

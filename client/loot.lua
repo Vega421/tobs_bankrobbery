@@ -128,6 +128,11 @@ function StartGrab(bank, trolleyCoords, kind)
     local ped = PlayerPedId()
     local models = TrolleyModels(kind)
     local trollyobj = GetClosestObjectOfType(trolleyCoords.x, trolleyCoords.y, trolleyCoords.z, 1.0, models.model, false, false, false)
+    if trollyobj == 0 and models ~= CASH_TROLLEY then
+        -- the server spawns a cash trolley for gold/diamonds on game builds without those models
+        models = CASH_TROLLEY
+        trollyobj = GetClosestObjectOfType(trolleyCoords.x, trolleyCoords.y, trolleyCoords.z, 1.0, models.model, false, false, false)
+    end
 
     -- Trolley missing or already being grabbed
     if trollyobj == 0 or IsEntityPlayingAnim(trollyobj, dict, "cart_cash_dissapear", 3) then

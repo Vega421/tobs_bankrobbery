@@ -61,10 +61,12 @@ function Bridge.CanCarry(src, item, count)
     return not ok or result ~= false -- older qb-inventory has no check: assume it fits
 end
 
-function Bridge.AddItem(src, item, count)
-    if UseOx() then return exports.ox_inventory:AddItem(src, item, count) == true end
-    return QbInventory("AddItem", "AddItem", src, item, count, false, nil, "tobs_bankrobbery") ~= false
+-- metadata (optional) is stored on the item: qb-inventory calls it info, e.g. {worth = 50000} for markedbills
+function Bridge.AddItem(src, item, count, metadata)
+    if UseOx() then return exports.ox_inventory:AddItem(src, item, count, metadata) == true end
+    return QbInventory("AddItem", "AddItem", src, item, count, false, metadata, "tobs_bankrobbery") ~= false
 end
+Bridge.Metadata = true
 
 function Bridge.AddMoney(src, amount, dirty)
     if dirty then return Bridge.AddItem(src, BlackMoneyItem(), amount) end
