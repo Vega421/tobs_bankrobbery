@@ -16,3 +16,10 @@ SV.BlockBeforeRestart = 15
 
 -- Print a message in the server console when a newer version is released on GitHub
 SV.CheckForUpdates = true
+
+-- Server-side dispatch or logging: runs on the server when a heist starts. Paste your dispatch
+-- script's server-side alert here (from its own documentation). For client-side dispatch scripts
+-- use TOB.Dispatch in config/config.lua instead.
+-- bank = "B1", "F1", ...; coords = vector3 of the bank; playerId = the robber; label = the bank's name
+SV.DispatchAlert = function(bank, coords, playerId, label)
+end

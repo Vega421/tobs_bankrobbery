@@ -40,22 +40,30 @@ function Bridge.HasItem(src, item, count)
     return ItemCount(src, item) >= count
 end
 
+-- Calls a qb-inventory export; falls back to the old Player.Functions (older qb-core) when it doesn't exist
+local function QbInventory(fn, oldFn, src, ...)
+    local args = table.pack(...)
+    local ok, result = pcall(function() return exports["qb-inventory"][fn](exports["qb-inventory"], src, table.unpack(args, 1, args.n)) end)
+    if ok then return result end
+    local player = GetPlayer(src)
+    if player == nil or player.Functions[oldFn] == nil then return nil end
+    return player.Functions[oldFn](args[1], args[2])
+end
+
 function Bridge.RemoveItem(src, item, count)
-    if UseOx() then return exports.ox_inventory:RemoveItem(src, item, count) end
-    local ok = pcall(function() exports["qb-inventory"]:RemoveItem(src, item, count, false, "tobs_bankrobbery") end)
-    if not ok then
-        local player = GetPlayer(src)
-        if player ~= nil then player.Functions.RemoveItem(item, count) end
-    end
+    if UseOx() then return exports.ox_inventory:RemoveItem(src, item, count) == true end
+    return QbInventory("RemoveItem", "RemoveItem", src, item, count, false, "tobs_bankrobbery") ~= false
+end
+
+function Bridge.CanCarry(src, item, count)
+    if UseOx() then return exports.ox_inventory:CanCarryItem(src, item, count) == true end
+    local ok, result = pcall(function() return exports["qb-inventory"]:CanAddItem(src, item, count) end)
+    return not ok or result ~= false -- older qb-inventory has no check: assume it fits
 end
 
 function Bridge.AddItem(src, item, count)
-    if UseOx() then return exports.ox_inventory:AddItem(src, item, count) end
-    local ok = pcall(function() exports["qb-inventory"]:AddItem(src, item, count, false, nil, "tobs_bankrobbery") end)
-    if not ok then
-        local player = GetPlayer(src)
-        if player ~= nil then player.Functions.AddItem(item, count) end
-    end
+    if UseOx() then return exports.ox_inventory:AddItem(src, item, count) == true end
+    return QbInventory("AddItem", "AddItem", src, item, count, false, nil, "tobs_bankrobbery") ~= false
 end
 
 function Bridge.AddMoney(src, amount, dirty)

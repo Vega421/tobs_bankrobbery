@@ -1,8 +1,7 @@
--- Automated tests for tobs_bankrobbery. They run the real script files outside FiveM, with small fake
--- versions of the game and framework functions. Run from the repo root:  lua5.4 tests/client_test.lua
+-- Automated tests for tobs_bankrobbery's client. They run the real client files outside FiveM, with small fake
+-- versions of the game functions and a fake framework bridge. Run from the repo root:  lua5.4 tests/client_test.lua
 -- GitHub runs them on every push (.github/workflows/tests.yml).
 
-local ROOT = ""
 local V = {}
 V.__index = V
 V.__sub = function(a, b) return setmetatable({x = a.x - b.x, y = a.y - b.y, z = a.z - b.z}, V) end
@@ -10,83 +9,205 @@ V.__add = function(a, b) return setmetatable({x = a.x + b.x, y = a.y + b.y, z = 
 V.__len = function(a) return math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z) end
 function vector3(x, y, z) return setmetatable({x = x, y = y, z = z}, V) end
 
-local handlers, serverEvents, zones, notes, commands = {}, {}, {}, {}, {}
-function RegisterCommand(n, fn) commands[n] = fn end
+-- FAKE GAME --
+-- Any game function the tests don't define returns false and is counted in CALLS[name].
+-- Read script globals that can be nil with rawget(_G, name), or this returns a function.
+CALLS = {}
+setmetatable(_G, {__index = function(_, name)
+    return function() CALLS[name] = (CALLS[name] or 0) + 1; return false end
+end})
+local handlers, serverEvents, zones, notes, commands, exportCalls, printed = {}, {}, {}, {}, {}, {}, {}
 local threads = {}
+local clock = 0
 Citizen = {CreateThread = function(fn) threads[#threads + 1] = fn end, Wait = function() end}
+function GetGameTimer() clock = clock + 100; return clock end
+function SetTimeout() end
 function RegisterNetEvent() end
 function AddEventHandler(n, fn) handlers[n] = fn end
-function TriggerEvent(n, ...) if handlers[n] then handlers[n](...) end end
 function TriggerServerEvent(n, ...) serverEvents[#serverEvents + 1] = {n, ...} end
-function GetResourceState(r) return (r == "ox_target" or r == "ox_lib") and "started" or "missing" end
+function RegisterCommand(n, fn) commands[n] = fn end
+RUNNING = {ox_target = true, ox_lib = true}
+function GetResourceState(r) return RUNNING[r] and "started" or "missing" end
+PEDPOS = vector3(1000, 1000, 0)
 function PlayerPedId() return 1 end
-function GetEntityCoords() return vector3(1000, 1000, 0) end
+function GetEntityCoords() return PEDPOS end
 function GetClosestObjectOfType() return 0 end
+function GetEntityHeading() return 0.0 end
 function GetHashKey(s) return #s end
-function DoesEntityExist() return false end
-function AddBlipForCoord() return 5 end
-for _, n in ipairs({"SetBlipSprite","SetBlipScale","SetBlipColour","PulseBlip","RemoveBlip","DeleteEntity","NetworkRequestControlOfEntity","SetEntityAsMissionEntity","FreezeEntityPosition","SetEntityHeading","print"}) do _G[n] = function() end end
+function AddBlipForCoord() CALLS.AddBlipForCoord = (CALLS.AddBlipForCoord or 0) + 1; return 5 end
+function IsControlJustReleased() return PRESSED == true end
+print = function(s) printed[#printed + 1] = s end
+-- exports.resource:fn(data) is recorded; ox_target zones are kept
+SKILL = true
 exports = setmetatable({}, {__index = function(_, res)
     return setmetatable({}, {__index = function(_, fn)
-        return function(_, data)
+        return function(_, data, ...)
+            exportCalls[#exportCalls + 1] = {res = res, fn = fn, data = data}
             if fn == "addSphereZone" then zones[#zones + 1] = data end
+            if fn == "skillCheck" then return SKILL end
             return true
         end
     end})
 end})
-TriggerEvent = function(n, ...)
+function TriggerEvent(n, ...)
     if n == "ox_lib:notify" then notes[#notes + 1] = select(1, ...).description return end
     if handlers[n] then handlers[n](...) end
 end
+local function lastExport(fn) for i = #exportCalls, 1, -1 do if exportCalls[i].fn == fn then return exportCalls[i] end end end
+local function lastServer(n) for i = #serverEvents, 1, -1 do if serverEvents[i][1] == n then return serverEvents[i] end end end
 
-dofile(ROOT .. "config/config.lua"); dofile(ROOT .. "locales/locales.lua")
+dofile("config/config.lua"); dofile("locales/locales.lua")
 -- Fake framework bridge (the real ones are tested in tests/bridge_test.lua)
+POLICE = false
 Bridge = {NotifyFallback = "native",
           Init = function(cb) INITCB = cb end,
-          IsPolice = function() return false end,
+          IsPolice = function() return POLICE end,
           TriggerCallback = function(n, cb) cb({B1 = TOB.Banks.B1, F1 = TOB.Banks.F1}, DOORS) end,
           Notify = function(m) notes[#notes + 1] = m end}
-DOORS = {F1 = {{loc = TOB.Banks.F1.gate.loc, h = 1, txtloc = TOB.Banks.F1.gate.txtloc, locked = true}, {loc = TOB.Banks.F1.vault.loc, txtloc = TOB.Banks.F1.vault.txtloc, locked = true}}, B1 = {{loc = TOB.Banks.B1.gate.loc, h = 1, txtloc = TOB.Banks.B1.gate.txtloc, locked = false},
-               {loc = TOB.Banks.B1.vault.loc, txtloc = TOB.Banks.B1.vault.txtloc, locked = false}}}
-dofile(ROOT .. "client/main.lua")
+DOORS = {F1 = {{loc = TOB.Banks.F1.gate.loc, h = 1, txtloc = TOB.Banks.F1.gate.txtloc, locked = true}, {loc = TOB.Banks.F1.vault.loc, txtloc = TOB.Banks.F1.vault.txtloc, locked = false}},
+         B1 = {{loc = TOB.Banks.B1.gate.loc, h = 1, txtloc = TOB.Banks.B1.gate.txtloc, locked = false}, {loc = TOB.Banks.B1.vault.loc, txtloc = TOB.Banks.B1.vault.txtloc, locked = false}}}
+for _, f in ipairs({"client/util.lua", "client/heist.lua", "client/loot.lua", "client/boxes.lua", "client/police.lua", "client/doors.lua", "client/main.lua"}) do
+    dofile(f)
+end
 
 local pass, fail = 0, 0
-local function check(label, cond) if cond then pass = pass + 1 else fail = fail + 1; print_ = nil; io.write("FAIL: " .. label .. "\n") end end
+local function check(label, cond) if cond then pass = pass + 1 else fail = fail + 1; io.write("FAIL: " .. label .. "\n") end end
 
--- run the Bridge.Init thread (loads banks, registers targets)
+-- 1. startup: banks from the server, ox_target zones
 INITCB()
-check("targets registered (B1 + F1 with gate panel and 8 deposit boxes each)", #zones == (1 + 3 + 2) + (1 + 1 + 3 + 2) + 16)
-check("vault zone has vault-item option", #zones[#zones].options == 3)
-handlers["TOB_fh:gateResult"]("F1", false)
-check("missing gate item notified", notes[#notes] == L("no_gate_item", TOB.GateItemLabel))
-handlers["TOB_fh:outcome"](false, "nope")
-check("failure notified", notes[#notes] == "nope")
-handlers["TOB_fh:toggleVault"]("B1", false)
-check("far toggleVault just stores state", Doors.B1[2].locked == false)
-handlers["TOB_fh:vaultState"]("B1", 123.0)
-check("vault angle stored", Doors.B1[2].state == 123.0)
-handlers["TOB_fh:startLoot_c"](TOB.Banks.B1, "B1")
-check("loot active", LootActive.B1 == true)
+check("ready after loading the banks", Ready == true)
+-- B1: start + 3 trolleys + 2 doors + 8 boxes; F1: the same + the gate panel
+check("targets registered", #zones == (1 + 3 + 2 + 8) + (1 + 1 + 3 + 2 + 8))
+local function zoneNamed(name)
+    for _, z in ipairs(zones) do for _, o in ipairs(z.options) do if o.name == name then return o end end end
+end
+check("one loot option per trolley kind", zoneNamed("tob_loot_B1_2_cash") ~= nil and zoneNamed("tob_loot_B1_2_gold") ~= nil)
+check("start option works", zoneNamed("tob_start_B1").canInteract() == true)
+check("vault zone has the vault-item option", zoneNamed("tob_vaultitem_B1") ~= nil)
+
+-- 2. the server says a bank is busy: nobody sees "start heist"
+handlers["TOB_fh:bankState"]("B1", true)
+check("bank marked busy", TOB.Banks.B1.onaction == true and zoneNamed("tob_start_B1").canInteract() == false)
+handlers["TOB_fh:bankState"]("B1", false)
+
+-- 3. loot phase: options follow the trolley kind, and the grab waits for the server
+check("no looting before the vault opens", not zoneNamed("tob_loot_B1_2_cash").canInteract())
+local data = {}
+for k, v in pairs(TOB.Banks.B1) do data[k] = v end
+data.special = {trolley2 = "gold"}
+handlers["TOB_fh:startLoot_c"](data, "B1")
+check("loot phase active", LootActive.B1 == true and LootOpen.B1 == true)
+check("gold trolley shows the gold option", zoneNamed("tob_loot_B1_2_gold").canInteract() == true and zoneNamed("tob_loot_B1_2_cash").canInteract() == false)
+check("cash trolley shows the cash option", zoneNamed("tob_loot_B1_1_cash").canInteract() == true)
+zoneNamed("tob_loot_B1_1_cash").onSelect()
+check("loot asks the server first", lastServer("TOB_fh:lootup")[3] == "Loot1")
+local asked = #serverEvents
+zoneNamed("tob_loot_B1_1_cash").onSelect()
+check("no second request while waiting", #serverEvents == asked)
+handlers["TOB_fh:lootResult"]("B1", "Loot1", false, "trolley_taken")
+check("refused loot is explained", notes[#notes] == L("trolley_taken"))
 handlers["TOB_fh:lootup_c"]("B1", "Loot2")
-check("loot marked", LootCheck.B1.Loot2 == true)
-handlers["TOB_fh:stopHeist_c"]("B1")
-threads[#threads]() -- loot thread: far away + Stop -> exits
-check("far loot thread exits on stop", LootActive.B1 == false)
-handlers["TOB_fh:forceReset"]("B1")
-check("force reset clears state", Check.B1 == false and AwaitingVault.B1 == nil)
-handlers["TOB_fh:policenotify"]("B1")
-check("non-police gets no alert", notes[#notes] == "nope")
+check("taken trolley hidden", LootCheck.B1.Loot2 == true and zoneNamed("tob_loot_B1_2_gold").canInteract() == false)
+handlers["TOB_fh:lootResult"]("B1", "Loot1", true)
+check("missing trolley: grab ends at once", lastServer("TOB_fh:grabDone") ~= nil)
+handlers["TOB_fh:bagFull"]()
+check("full pockets explained", notes[#notes] == L("bag_full"))
+handlers["TOB_fh:closing"]("B1", 30)
+check("closing stops the trolleys", LootOpen.B1 == false and zoneNamed("tob_loot_B1_1_cash").canInteract() == false)
+handlers["TOB_fh:cleanup"]("B1")
+check("cleanup ends the loot phase", LootActive.B1 == false and BoxState.B1 == nil)
+
+-- 4. minigames: ox_lib, none, your own function, a broken function
+check("ox_lib skill check used", HackMinigame("B1") == true and lastExport("skillCheck").data == TOB.MinigameDifficulty)
+SKILL = false
+check("failed skill check", HackMinigame("B1") == false)
+SKILL = true
+TOB.HackMinigame = function(bank) return bank == "B1" end
+check("custom minigame function", HackMinigame("B1") == true and HackMinigame("F1") == false)
+TOB.HackMinigame = function() error("broken") end
+check("broken minigame lets the heist go on", HackMinigame("B1") == true and printed[#printed]:find("Minigame error"))
+TOB.HackMinigame = "none"
+local before = #exportCalls
+check("no minigame", HackMinigame("B1") == true and #exportCalls == before)
+TOB.HackMinigame = "ox_lib"
+TOB.DrillMinigame = function(bank, box) return box == 3 end
+check("custom drill minigame", DrillMinigame("B1", 3) == true and DrillMinigame("B1", 1) == false)
+TOB.DrillMinigame = {"easy"}
+
+-- 5. starting a heist: dispatch and the hack
+RUNNING["ps-dispatch"] = true
+handlers["TOB_fh:outcome"](true, "B1")
+check("ps-dispatch Paleto alert", lastExport("PaletoBankRobbery") ~= nil and lastExport("PaletoBankRobbery").res == "ps-dispatch")
+check("hack started after the minigame", lastServer("TOB_fh:hackStarted")[2] == "B1")
+check("leading the heist", Leading == "B1" and Check.B1 == true)
+handlers["TOB_fh:outcome"](true, "F1")
+check("ps-dispatch Fleeca alert", lastExport("FleecaBankRobbery") ~= nil)
+RUNNING["ps-dispatch"] = nil
+local customCalled
+TOB.DispatchAlert = function(coords, bank) customCalled = bank end
+handlers["TOB_fh:outcome"](true, "B1")
+check("custom dispatch without ps-dispatch", customCalled == "B1")
+SKILL = false
+handlers["TOB_fh:outcome"](true, "B1")
+check("failed minigame tells the server", lastServer("TOB_fh:hackFailed")[2] == "B1")
+SKILL = true
+handlers["TOB_fh:outcome"](false, "nope")
+check("refused start is explained", notes[#notes] == "nope")
+handlers["TOB_fh:heistFailed"]("B1", "vault_timeout")
+check("failed heist clears the leader", rawget(_G, "Leading") == nil and notes[#notes] == L("vault_timeout"))
+
+-- 6. vault item, gate and taking over
+handlers["TOB_fh:awaitVaultItem"]("B1")
+check("vault item prompt", AwaitingVault.B1 == true and zoneNamed("tob_vaultitem_B1").canInteract() == true)
 handlers["TOB_fh:vaultItemResult"]("B1", false)
-check("missing vault item notified", notes[#notes] == L("no_vault_item", TOB.VaultItemLabel))
-check("target canInteract works", zones[1].options[1].canInteract() == true)
-handlers["TOB_fh:drillResult"]("B1", 1, false, "no_drill")
-check("missing drill notified", notes[#notes] == L("no_drill", TOB.DrillItemLabel))
+check("missing vault item explained", notes[#notes] == L("no_vault_item", TOB.VaultItemLabel))
+handlers["TOB_fh:vaultOpened"]("F1", nil, {})
+check("gate hint after the Fleeca vault opens", AwaitingGate.F1 == true and zoneNamed("tob_gate_F1").canInteract() == true)
+handlers["TOB_fh:gateResult"]("F1", false)
+check("missing gate item explained", notes[#notes] == L("no_gate_item", TOB.GateItemLabel))
+AwaitingVault.B1 = nil
+handlers["TOB_fh:takeover"]("B1", {stage = "vaultitem", itemUsed = false})
+check("taking over the vault item step", Leading == "B1" and AwaitingVault.B1 == true)
+check("new leader is told", notes[#notes] == L("use_vault_item", TOB.VaultItemLabel) or notes[#notes - 1] == L("you_lead"))
+handlers["TOB_fh:forceReset"]("B1")
+check("admin reset clears the heist", AwaitingVault.B1 == nil and rawget(_G, "Leading") == nil)
+
+-- 7. police
+POLICE = true
+local blips = CALLS.AddBlipForCoord or 0
+handlers["TOB_fh:policenotify"]("B1")
+check("police alert and blip", notes[#notes] == L("police_alert") and CALLS.AddBlipForCoord == blips + 1)
+handlers["TOB_fh:bankState"]("B1", false)
+check("blip removed when the heist ends", (CALLS.RemoveBlip or 0) >= 1)
+check("police can lock doors", zoneNamed("tob_lock_B1_1").canInteract() == true and zoneNamed("tob_start_B1").canInteract() == false)
+POLICE = false
+
+-- 8. prompts use ox_lib's text UI when it's running
+check("prompt mode is the text UI", PromptMode() == "textui")
+before = #exportCalls
+check("far away: no prompt", Prompt(vector3(0, 0, 0), "Test", 3.0, 1.0) == false and #exportCalls == before)
+PRESSED = true
+check("close: prompt shown and E works", Prompt(vector3(0, 0, 0), "Test", 0.5, 1.0) == true and lastExport("showTextUI").data == "[E] Test")
+PRESSED = false
+before = #exportCalls
+Prompt(vector3(0, 0, 0), "Test", 0.5, 1.0)
+check("same text isn't sent again", #exportCalls == before)
+
+-- 9. other events
+handlers["TOB_fh:drillResult"]("B1", 1, false, "already_drilling")
+check("drilling refusal explained", notes[#notes] == L("already_drilling"))
 handlers["TOB_fh:boxState"]("B1", 2, "opened")
 check("box state stored", BoxState.B1[2] == "opened")
-handlers["TOB_fh:boxesReset"]("B1")
-check("boxes reset", BoxState.B1 == nil)
 handlers["TOB_fh:heistTotal"]("12,000", "30,000")
 check("heist total shown", notes[#notes] == L("heist_total", "12,000", "30,000"))
+handlers["TOB_fh:timer"]("B1", 90)
+check("timer stored", TimerEnds.B1 ~= nil)
+handlers["TOB_fh:vaultState"]("B1", 123.0)
+check("vault angle stored", Doors.B1[2].state == 123.0)
 check("bankcoords command registered", commands[TOB.CoordsCommand] ~= nil)
+for _, name in ipairs({"StartHeist", "StartGrab", "RequestLoot", "SpawnTrolleys", "DrillBox", "UseGate", "UseVaultItem", "ToggleDoor", "DoorThreads", "RegisterTargets", "CleanBankProps"}) do
+    check(name .. " defined", rawget(_G, name) ~= nil)
+end
+
 io.write(("%d passed, %d failed\n"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

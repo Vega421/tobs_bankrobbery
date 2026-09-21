@@ -33,13 +33,23 @@ function Bridge.HasItem(src, item, count)
 end
 
 function Bridge.RemoveItem(src, item, count)
+    if not Bridge.HasItem(src, item, count) then return false end
+    ESX.GetPlayerFromId(src).removeInventoryItem(item, count)
+    return true
+end
+
+function Bridge.CanCarry(src, item, count)
     local xPlayer = ESX.GetPlayerFromId(src)
-    if xPlayer ~= nil then xPlayer.removeInventoryItem(item, count) end
+    if xPlayer == nil then return false end
+    if xPlayer.canCarryItem == nil then return true end -- older ESX has no weight check
+    return xPlayer.canCarryItem(item, count) ~= false
 end
 
 function Bridge.AddItem(src, item, count)
     local xPlayer = ESX.GetPlayerFromId(src)
-    if xPlayer ~= nil then xPlayer.addInventoryItem(item, count) end
+    if xPlayer == nil or not Bridge.CanCarry(src, item, count) then return false end
+    xPlayer.addInventoryItem(item, count)
+    return true
 end
 
 function Bridge.AddMoney(src, amount, dirty)

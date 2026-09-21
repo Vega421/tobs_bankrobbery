@@ -35,12 +35,19 @@ end
 
 function Bridge.RemoveItem(src, item, count)
     local user_id = vRP.getUserId({src})
-    if user_id ~= nil then vRP.tryGetInventoryItem({user_id, item, count}) end
+    return user_id ~= nil and vRP.tryGetInventoryItem({user_id, item, count}) ~= false
+end
+
+-- vRP's weight limit isn't checked here: items are always given
+function Bridge.CanCarry(src, item, count)
+    return vRP.getUserId({src}) ~= nil
 end
 
 function Bridge.AddItem(src, item, count)
     local user_id = vRP.getUserId({src})
-    if user_id ~= nil then vRP.giveInventoryItem({user_id, item, count}) end
+    if user_id == nil then return false end
+    vRP.giveInventoryItem({user_id, item, count})
+    return true
 end
 
 function Bridge.AddMoney(src, amount, dirty)
