@@ -22,10 +22,15 @@ TOB.CrewRadius = 15.0 -- meters around the start panel that count as "near"
 TOB.OneAtATime = false -- true = only one heist on the whole server at a time
 TOB.GlobalCooldown = 0 -- seconds after any heist before any bank can be robbed (0 = off, each bank only has its own cooldown)
 
--- Hacking minigame (ox_lib skill check). Failing it ends the heist; police are already alerted.
-TOB.Minigame = true -- needs ox_lib; skipped automatically if ox_lib isn't running
-TOB.MinigameDifficulty = {"easy", "easy", "medium", "medium"} -- one entry per round: "easy", "medium" or "hard"
-TOB.MinigameKeys = {"w", "a", "s", "d"} -- keys the skill check can ask for
+-- Hacking minigame, played before the hack. Failing it ends the heist; police are already alerted.
+--   "ox_lib" = ox_lib skill check (skipped if ox_lib isn't running), "none" = no minigame,
+--   or your own function using another minigame resource. It must return true when the player passed:
+--   TOB.HackMinigame = function(bank)
+--       return exports["my_minigame"]:Start(...) -- see that resource's documentation
+--   end
+TOB.HackMinigame = "ox_lib"
+TOB.MinigameDifficulty = {"easy", "easy", "medium", "medium"} -- ox_lib: one entry per round: "easy", "medium" or "hard"
+TOB.MinigameKeys = {"w", "a", "s", "d"} -- ox_lib: keys the skill check can ask for
 
 -- Extra vault step: after the hack the robber must use this item on the vault door.
 TOB.VaultItem = "" -- item name, e.g. "thermite" or "drill". "" = the vault opens right after the hack
@@ -37,14 +42,13 @@ TOB.GateItem = "" -- item needed for the second panel, e.g. "secure_card". "" = 
 TOB.GateItemLabel = "Secure ID Card" -- name shown to players
 TOB.GateHackTime = 10000 -- milliseconds the gate hack takes
 
--- Rewards
-TOB.mincash = 3000 -- minimum cash per cash pile (a trolley has many piles)
-TOB.maxcash = 6500 -- maximum cash per cash pile
+-- Rewards. A full trolley pays TOB.TrolleyCash; stopping early pays for the time spent grabbing.
+TOB.TrolleyCash = {min = 50000, max = 80000} -- cash in one full trolley (3 trolleys per heist)
+TOB.GrabTime = 37 -- seconds it takes to empty a trolley (the length of the grab animation)
 TOB.black = false -- true pays dirty money instead of cash (ESX: the black_money account, others: the TOB.blackmoney item)
 TOB.blackmoney = "auto" -- dirty money item: "auto" = "dirty_money" on vRP, "black_money" on QBCore / Qbox
 TOB.RewardItem = "" -- give this item instead of money, e.g. "markedbills". "" = pay money
-TOB.RewardItemCount = "cash" -- "cash" = item count equals the cash amount (money-like items), or a number of items per pile (e.g. 1 for bags)
-TOB.MaxPiles = 60 -- anti-cheat: most cash piles one player can be paid for per trolley
+TOB.RewardItemCount = "cash" -- "cash" = item count equals the cash amount (money-like items), or the number of items in a full trolley (e.g. 10 bags)
 
 -- Animations and sound
 TOB.LaptopHack = true -- laptop hacking animation at the panel during the hack
@@ -60,7 +64,7 @@ TOB.SpecialTrolleyChance = 25 -- % chance per heist that one trolley is special 
 TOB.SpecialTrolleys = {
     gold = {model = "ch_prop_gold_trolly_01a", pile = "ch_prop_gold_bar_01a", empty = 2714348429, multiplier = 2.0, item = ""},
     diamond = {model = "ch_prop_diamond_trolly_01a", pile = "ch_prop_vault_dimaondbox_01a", empty = 881130828, multiplier = 3.0, item = ""},
-    -- item = "goldbar" pays that item (1 per pile) instead of cash
+    -- item = "goldbar", itemCount = 20 pays that item instead of cash (itemCount = items in a full trolley)
 }
 
 -- Deposit boxes in the vault: drill them open while the vault is open
@@ -68,7 +72,7 @@ TOB.DepositBoxes = true
 TOB.DrillItem = "drill" -- item needed to drill (not used up). "" = no item needed
 TOB.DrillItemLabel = "drill" -- name shown to players
 TOB.DrillTime = 15000 -- milliseconds per box
-TOB.DrillMinigame = {"easy", "medium"} -- ox_lib skill check while drilling (empty = none)
+TOB.DrillMinigame = {"easy", "medium"} -- ox_lib skill check while drilling ({} = none), or your own function(bank, box) like TOB.HackMinigame
 -- What a box can contain. chance = weight. type "money" or "item" (the item must exist in your inventory)
 TOB.DrillRewards = {
     {type = "money", min = 1500, max = 4000, chance = 60},
@@ -80,6 +84,7 @@ TOB.DrillRewards = {
 
 -- Interaction and UI
 TOB.Target = "auto" -- "auto" (ox_target if running, otherwise press E), "ox_target" or "none" (always press E)
+TOB.Prompts = "auto" -- "press E" prompts: "auto" (ox_lib text UI if running, otherwise 3D text), "ox_lib" or "3d"
 TOB.Progress = "auto" -- "auto" (ox_lib if running, otherwise progressBars), "ox_lib" or "progressBars"
 TOB.Notify = "auto" -- "auto", "ox_lib", "mythic_notify", "framework" (ESX / QBCore notifications) or "native". "auto" uses ox_lib, then mythic_notify, then the framework's
 TOB.NotifyTitle = "Bank Robbery" -- title shown on ox_lib notifications
@@ -88,11 +93,17 @@ TOB.CoordsCommand = "bankcoords" -- prints your position (for adding banks) in c
 -- Police alerts
 TOB.BuiltInPoliceAlert = true -- notification + map blip for police. Set false if your dispatch script handles it
 
--- Runs on the robber's game when the heist starts. Paste your dispatch script's alert here,
--- using its own documentation. coords is the bank's position (vector3).
-TOB.DispatchAlert = function(coords)
+-- Dispatch alert, sent from the robber's game when the heist starts:
+--   "auto" = ps-dispatch if it's running, otherwise TOB.DispatchAlert below
+--   "ps-dispatch" = its Paleto / Fleeca bank robbery alerts, "custom" = TOB.DispatchAlert, "none" = off
+-- Server-side dispatch scripts: use SV.DispatchAlert in config/config_server.lua.
+TOB.Dispatch = "auto"
+
+-- Your own dispatch call (TOB.Dispatch = "auto" or "custom"). Paste your dispatch script's alert here,
+-- using its own documentation. coords is the bank's position (vector3), bank is "B1", "F1", ...
+TOB.DispatchAlert = function(coords, bank)
     -- Example (replace with your dispatch script's call):
-    -- exports["my_dispatch"]:SendAlert({code = "10-90", message = "Paleto Bank robbery", coords = coords})
+    -- exports["my_dispatch"]:SendAlert({code = "10-90", message = "Bank robbery", coords = coords})
 end
 
 -- Banks

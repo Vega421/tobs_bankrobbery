@@ -21,11 +21,15 @@ function Bridge.HasItem(src, item, count)
 end
 
 function Bridge.RemoveItem(src, item, count)
-    exports.ox_inventory:RemoveItem(src, item, count)
+    return exports.ox_inventory:RemoveItem(src, item, count) == true
+end
+
+function Bridge.CanCarry(src, item, count)
+    return exports.ox_inventory:CanCarryItem(src, item, count) == true
 end
 
 function Bridge.AddItem(src, item, count)
-    exports.ox_inventory:AddItem(src, item, count)
+    return exports.ox_inventory:AddItem(src, item, count) == true
 end
 
 function Bridge.AddMoney(src, amount, dirty)

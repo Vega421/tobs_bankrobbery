@@ -23,8 +23,11 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 - Paleto Bay plus all 6 Fleeca banks
 - Laptop hack, thermite, bank alarm and drillable deposit boxes
 - Cash, gold and diamond trolleys, with a live loot counter
-- Server-side anti-cheat, Discord logs and an admin reset command
-- Uses ox_lib, ox_target, ox_inventory and your dispatch script when you have them
+- The server runs the whole heist: anti-cheat, Discord logs, saved cooldowns and an admin reset command
+- Uses ox_lib, ox_target, ox_inventory and ps-dispatch (or your dispatch script) when you have them
+- Any hacking minigame: ox_lib's, none, or your own
+- If the robber disconnects, the nearest crew member takes over
+- Events and exports for other resources (`IsHeistActive`, `heistStarted`, ...)
 - Rewards as cash, dirty money or items; optional thermite-style vault step
 - English and Danish, easy to translate; add your own banks from the config (`/bankcoords` helps)
 - Minimum crew size, one-heist-at-a-time, on-duty police only, and no heists right before a restart
@@ -43,7 +46,7 @@ See the [installation guide](https://vega421.github.io/scripts/tobs-bankrobbery/
 
 ## Development
 
-Framework code lives only in `bridge/<framework>/`; everything else is shared. Run the tests with Lua 5.4 from the repo root:
+Framework code lives only in `bridge/<framework>/`; everything else is shared. The server runs the heist (`server/heist.lua`); the client plays the animations and asks the server. Run the tests with Lua 5.4 from the repo root:
 
 ```bash
 lua5.4 tests/server_test.lua && lua5.4 tests/bridge_test.lua && lua5.4 tests/client_test.lua

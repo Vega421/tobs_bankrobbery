@@ -47,28 +47,41 @@ end
 
 -- A small inventory + wallet shared by the fakes: INV[src][item], CASH[src], ADDED[src][item]
 local INV, CASH, ADDED
+FITS = true -- false = the player's inventory is full
 local function reset()
     INV = {[1] = {id_card_f = 2}, [2] = {}, [3] = {}}
     CASH, ADDED = {}, {}
+    FITS = true
 end
 local function added(src, item, n) ADDED[src] = ADDED[src] or {}; ADDED[src][item] = (ADDED[src][item] or 0) + n end
 local oxInventory = {
     GetItemCount = function(src, item) return INV[src][item] or 0 end,
-    RemoveItem = function(src, item, n) INV[src][item] = INV[src][item] - n; return true end,
-    AddItem = function(src, item, n) added(src, item, n); return true end,
+    RemoveItem = function(src, item, n)
+        if (INV[src][item] or 0) < n then return false, "not_enough_items" end
+        INV[src][item] = INV[src][item] - n; return true
+    end,
+    CanCarryItem = function() return FITS end,
+    AddItem = function(src, item, n)
+        if not FITS then return false, "inventory_full" end
+        added(src, item, n); return true
+    end,
 }
 
 -- Checks every server bridge function. Player 1 = robber with 2 cards, 2 = police on duty, 3 = police off duty.
-local function serverChecks(fw, dirtyItem, offDutyCounts)
+local function serverChecks(fw, dirtyItem, offDutyCounts, fullCheck)
     check(fw .. ": detected", Framework == fw and Bridge ~= nil)
     check(fw .. ": robber isn't police", Bridge.IsPolice(1) == false)
     check(fw .. ": police on duty", Bridge.IsPolice(2) == true)
     check(fw .. ": police count", Bridge.CountPolice() == (offDutyCounts and 2 or 1))
     check(fw .. ": has item", Bridge.HasItem(1, "id_card_f", 2) == true and Bridge.HasItem(1, "id_card_f", 3) == false)
-    Bridge.RemoveItem(1, "id_card_f", 1)
-    check(fw .. ": remove item", INV[1].id_card_f == 1)
-    Bridge.AddItem(1, "goldbar", 3)
-    check(fw .. ": add item", ADDED[1] and ADDED[1].goldbar == 3)
+    check(fw .. ": remove item", Bridge.RemoveItem(1, "id_card_f", 1) == true and INV[1].id_card_f == 1)
+    check(fw .. ": add item", Bridge.AddItem(1, "goldbar", 3) == true and ADDED[1] and ADDED[1].goldbar == 3)
+    check(fw .. ": can carry", Bridge.CanCarry(1, "goldbar", 1) == true)
+    if fullCheck then
+        FITS = false
+        check(fw .. ": full inventory -> not added", Bridge.CanCarry(1, "goldbar", 1) == false and Bridge.AddItem(1, "goldbar", 1) == false and ADDED[1].goldbar == 3)
+        FITS = true
+    end
     Bridge.AddMoney(1, 500, false)
     check(fw .. ": add cash", CASH[1] == 500)
     Bridge.AddMoney(1, 700, true)
@@ -92,7 +105,7 @@ FAKE.qbx_core = {
 }
 FAKE.ox_inventory = oxInventory
 load("server", {"qbx_core", "qb-core", "ox_inventory"}) -- qbx_core also provides qb-core
-serverChecks("qbox", "black_money", false)
+serverChecks("qbox", "black_money", false, true)
 TOB.PoliceOnDuty = false
 check("qbox: off-duty police counted when PoliceOnDuty is off", Bridge.CountPolice() == 2)
 
@@ -106,6 +119,7 @@ local function xPlayer(src)
     return {
         job = {name = (src == 1) and "unemployed" or "police"},
         getInventoryItem = function(item) return {count = INV[src][item] or 0} end,
+        canCarryItem = function() return FITS end,
         removeInventoryItem = function(item, n) INV[src][item] = INV[src][item] - n end,
         addInventoryItem = function(item, n) added(src, item, n) end,
         addMoney = function(n) CASH[src] = (CASH[src] or 0) + n end,
@@ -116,7 +130,7 @@ FAKE.es_extended = {getSharedObject = function()
     return {GetPlayerFromId = xPlayer, GetPlayers = function() return {1, 2, 3} end}
 end}
 load("server", {"es_extended"})
-serverChecks("esx", nil, true) -- ESX has no duty: both police players count
+serverChecks("esx", nil, true, true) -- ESX has no duty: both police players count
 
 ---------------------------------------------------------------- QBCore with qb-inventory
 reset()
@@ -128,11 +142,31 @@ end
 FAKE["qb-core"] = {GetCoreObject = function() return {Functions = {GetPlayer = qbPlayer}} end}
 FAKE["qb-inventory"] = {
     GetItemCount = function(src, item) return INV[src][item] or 0 end,
-    RemoveItem = function(src, item, n) INV[src][item] = INV[src][item] - n end,
-    AddItem = function(src, item, n) added(src, item, n) end,
+    RemoveItem = function(src, item, n) INV[src][item] = INV[src][item] - n; return true end,
+    CanAddItem = function() return FITS end,
+    AddItem = function(src, item, n)
+        if not FITS then return false end
+        added(src, item, n); return true
+    end,
 }
 load("server", {"qb-core", "qb-inventory"})
-serverChecks("qb", "black_money", false)
+serverChecks("qb", "black_money", false, true)
+
+-- older qb-core without qb-inventory exports: items on the player
+reset()
+FAKE["qb-inventory"] = setmetatable({}, {__index = function() error("No such export") end})
+FAKE["qb-core"] = {GetCoreObject = function() return {Functions = {GetPlayer = function(src)
+    local p = qbPlayer(src)
+    p.Functions.GetItemByName = function(item) return {amount = INV[src][item] or 0} end
+    p.Functions.RemoveItem = function(item, n) INV[src][item] = INV[src][item] - n; return true end
+    p.Functions.AddItem = function(item, n) added(src, item, n); return true end
+    return p
+end}} end}
+load("server", {"qb-core"})
+check("old qb-core: has item", Bridge.HasItem(1, "id_card_f", 2) == true)
+check("old qb-core: remove item", Bridge.RemoveItem(1, "id_card_f", 1) == true and INV[1].id_card_f == 1)
+check("old qb-core: add item (nil args kept)", Bridge.AddItem(1, "goldbar", 2) == true and ADDED[1].goldbar == 2)
+FAKE["qb-core"] = {GetCoreObject = function() return {Functions = {GetPlayer = qbPlayer}} end}
 
 -- QBCore with ox_inventory: items must go through ox_inventory, not qb-inventory
 reset()

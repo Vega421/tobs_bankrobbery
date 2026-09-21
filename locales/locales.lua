@@ -46,6 +46,11 @@ Locales = {
         box_item = "You found %dx %s in the deposit box.",
         planting_thermite = "Planting thermite...",
         thermite_burning = "Thermite is burning through the door...",
+        robber_left = "You left the bank. The heist failed.",
+        you_lead = "The heist leader left. You're leading the heist now.",
+        bag_full = "Your pockets are full. Make room to take more.",
+        trolley_taken = "Someone is already emptying this trolley.",
+        already_drilling = "You're already drilling a box.",
     },
     da = {
         start_heist = "Start bankrøveri",
@@ -94,6 +99,11 @@ Locales = {
         box_item = "Du fandt %dx %s i bankboksen.",
         planting_thermite = "Placerer termit...",
         thermite_burning = "Termitten brænder gennem døren...",
+        robber_left = "Du forlod banken. Røveriet mislykkedes.",
+        you_lead = "Lederen af røveriet forsvandt. Du leder røveriet nu.",
+        bag_full = "Dine lommer er fulde. Gør plads for at tage mere.",
+        trolley_taken = "Nogen er allerede ved at tømme denne vogn.",
+        already_drilling = "Du borer allerede i en boks.",
     },
 }
 

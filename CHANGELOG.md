@@ -4,6 +4,40 @@ All notable changes to tobs_bankrobbery. Each version is also a [GitHub release]
 
 Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
+## 2.1.0 · 2026-09-21
+
+A security and reliability update: the server now runs the whole heist, and trolleys pay by the time spent grabbing.
+
+**Security**
+- The server runs every step of the heist and its timers (hack, vault item, inner gate, security timer, vault closing). Cheaters can no longer skip the hack, open the vault early, loot before the vault is open, or keep the vault open
+- Trolleys pay for the time actually spent grabbing, so asking for cash faster pays nothing more
+- One deposit box at a time per player
+- Start requests are rate limited, door events only accept police, and Discord logs can't ping @everyone
+
+**Rewards**
+- **Trolleys are worth `TOB.TrolleyCash`** (default $50,000–80,000 each) and pay out over `TOB.GrabTime` seconds. Stopping early pays for the time spent. `TOB.mincash`, `TOB.maxcash` and `TOB.MaxPiles` are gone: set `TOB.TrolleyCash` instead
+- `TOB.RewardItemCount` as a number is now the items in a full trolley (was per pile). Item trolleys use `itemCount`
+- Full pockets: loot waits until there's room (trolleys), or the deposit box stays closed, instead of the loot being lost
+- Discord logs and totals show items as items, not as cash
+
+**New**
+- **Crew takeover:** if the robber disconnects, the nearest crew member leads the heist instead of it ending
+- **Any hacking minigame:** `TOB.HackMinigame` = `"ox_lib"`, `"none"` or your own function using another minigame resource. `TOB.DrillMinigame` can be a function too
+- **Dispatch:** `TOB.Dispatch = "auto"` sends ps-dispatch's Paleto / Fleeca bank alerts when ps-dispatch is running. `SV.DispatchAlert` in `config_server.lua` for server-side dispatch scripts
+- **For other resources:** server events `tobs_bankrobbery:heistStarted`, `vaultOpened`, `heistEnded`, and exports `IsHeistActive`, `GetHeist`, `GetBanks`, `ResetHeist`
+- **ox_lib text prompts** instead of 3D text when ox_lib is running (`TOB.Prompts`)
+- Cooldowns are saved, so restarting the script or the server doesn't reset them
+- The countdown is shown to the whole crew at the bank, as minutes and seconds, including the vault closing
+- Police see the bank's blip for the whole heist, also officers who go on duty during it
+- A warning in the console when OneSync is off (the anti-cheat needs it to check positions)
+
+**Fixes**
+- Nobody sees "Start bank heist" while a bank is being robbed
+- A trolley taken by two players at once no longer flags the second one as a cheater
+- The gold and diamond trolleys show their own label with ox_target
+
+**Updating from 2.0.0:** replace the whole folder, then copy your settings into the new `config/config.lua` (new: `TOB.TrolleyCash`, `TOB.GrabTime`, `TOB.HackMinigame`, `TOB.Prompts`, `TOB.Dispatch`) and `config/config_server.lua` (new: `SV.DispatchAlert`).
+
 ## 2.0.0 · 2026-09-21
 
 **tobs_blaine is now tobs_bankrobbery: one resource for every framework.** The ESX, vRP and Qbox versions are merged; the heist is the same as 1.5.0.
