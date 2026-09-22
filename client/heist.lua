@@ -148,7 +148,8 @@ function StartHeist(bank)
     Citizen.Wait(1000)
 
     local laptop = TOB.LaptopHack and LaptopStart(bank) or nil
-    if not HackMinigame(bank) then
+    -- the bank's own minigame (tobs_minigames), else the normal one (client/minigames.lua)
+    if not BankHackMinigame(bank, function(v) return HackMinigame(bank, v) end) then
         LaptopStop(laptop)
         TriggerServerEvent("TOB_fh:hackFailed", bank)
         return

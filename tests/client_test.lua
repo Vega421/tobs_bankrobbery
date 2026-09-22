@@ -21,7 +21,7 @@ local threads = {}
 local clock = 0
 -- STOPWAIT makes Wait() stop a thread, so one pass of a "while true" loop can be run with pcall
 STOPWAIT = false
-Citizen = {CreateThread = function(fn) threads[#threads + 1] = fn end, Wait = function() if STOPWAIT then error("stop") end end}
+Citizen = {CreateThread = function(fn) threads[#threads + 1] = fn end, SetTimeout = function() end, Wait = function() if STOPWAIT then error("stop") end end}
 function GetPlayerServerId() return 7 end
 function PlayerId() return 1 end
 function GetPlayerFromServerId(id) return id == 99 and -1 or id end
@@ -48,9 +48,10 @@ SKILL = true
 exports = setmetatable({}, {__index = function(_, res)
     return setmetatable({}, {__index = function(_, fn)
         return function(_, data, ...)
-            exportCalls[#exportCalls + 1] = {res = res, fn = fn, data = data}
+            exportCalls[#exportCalls + 1] = {res = res, fn = fn, data = data, opts = (...)}
             if fn == "addSphereZone" then zones[#zones + 1] = data end
             if fn == "skillCheck" then return SKILL end
+            if fn == "Start" and res == "tobs_minigames" then return rawget(_G, "MGRESULT") end
             return true
         end
     end})
@@ -73,7 +74,8 @@ Bridge = {NotifyFallback = "native",
           Notify = function(m) notes[#notes + 1] = m end}
 DOORS = {F1 = {{loc = TOB.Banks.F1.gate.loc, h = 1, txtloc = TOB.Banks.F1.gate.txtloc, locked = true}, {loc = TOB.Banks.F1.vault.loc, txtloc = TOB.Banks.F1.vault.txtloc, locked = false}},
          B1 = {{loc = TOB.Banks.B1.gate.loc, h = 1, txtloc = TOB.Banks.B1.gate.txtloc, locked = false}, {loc = TOB.Banks.B1.vault.loc, txtloc = TOB.Banks.B1.vault.txtloc, locked = false}}}
-for _, f in ipairs({"client/util.lua", "client/heist.lua", "client/loot.lua", "client/boxes.lua", "client/police.lua", "client/tracker.lua", "client/doors.lua", "client/main.lua"}) do
+dofile("locales/tools.lua")
+for _, f in ipairs({"client/minigames.lua", "client/sounds.lua", "client/util.lua", "client/heist.lua", "client/loot.lua", "client/boxes.lua", "client/police.lua", "client/tracker.lua", "client/doors.lua", "client/main.lua"}) do
     dofile(f)
 end
 
@@ -256,6 +258,66 @@ check("gate unlock applied at once", CALLS.DoorSystemSetDoorState == applied + 1
 STOPWAIT = true; pcall(threads[gateThread]); STOPWAIT = false
 check("gate registered only once", CALLS.AddDoorToSystem == 1)
 GetClosestObjectOfType = function() return 0 end
+
+-- 13. per-bank minigames with tobs_minigames (client/minigames.lua, tested on its own in tests/minigames_test.lua)
+local function lastStart() local e = lastExport("Start") return e and e.res == "tobs_minigames" and e or nil end
+RUNNING.tobs_minigames = true; MGRESULT = true
+local skills = #exportCalls
+handlers["TOB_fh:outcome"](true, "B1")
+check("Paleto plays GTA's hacking laptop", lastStart() ~= nil and lastStart().data == "hack")
+check("... without tobs_minigames' own animation (the heist plays the laptop scene)", lastStart().opts.animate == false)
+local sc = false
+for i = skills + 1, #exportCalls do if exportCalls[i].fn == "skillCheck" then sc = true end end
+check("won laptop game starts the hack, no skill check on top", not sc and lastServer("TOB_fh:hackStarted")[2] == "B1")
+MGRESULT = false
+handlers["TOB_fh:outcome"](true, "B1")
+check("lost laptop game fails the hack", lastServer("TOB_fh:hackFailed")[2] == "B1")
+MGRESULT = nil; SKILL = true
+local calls = #exportCalls
+handlers["TOB_fh:outcome"](true, "B1")
+local usedSkill = false
+for i = calls + 1, #exportCalls do if exportCalls[i].fn == "skillCheck" then usedSkill = true end end
+check("GTA screen doesn't load: the ox_lib skill check instead", usedSkill and lastServer("TOB_fh:hackStarted")[2] == "B1")
+RUNNING.tobs_minigames = nil
+calls = #exportCalls
+handlers["TOB_fh:outcome"](true, "B1")
+local startedMg = false
+for i = calls + 1, #exportCalls do if exportCalls[i].res == "tobs_minigames" then startedMg = true end end
+check("without tobs_minigames: the normal minigame", not startedMg and lastExport("skillCheck").data == TOB.MinigameDifficulty)
+TOB.Banks.F1.minigames = {hack = {"hard"}}
+handlers["TOB_fh:outcome"](true, "F1")
+check("a bank's own ox_lib difficulties", lastExport("skillCheck").data[1] == "hard")
+TOB.Banks.F1.minigames = nil
+-- drilling a deposit box
+RUNNING.tobs_minigames = true; MGRESULT = true
+calls = #exportCalls
+handlers["TOB_fh:drillResult"]("B1", 1, true)
+local bar = false
+for i = calls + 1, #exportCalls do
+    if exportCalls[i].fn == "progressBar" then bar = true end
+end
+check("Paleto box: GTA's drill replaces the progress bar", lastStart().data == "drill" and not bar and lastServer("TOB_fh:drillDone")[4] == true)
+MGRESULT = false
+handlers["TOB_fh:drillResult"]("B1", 1, true)
+check("lost drill game: box not opened", lastServer("TOB_fh:drillDone")[4] == false and notes[#notes] == L("drill_failed"))
+RUNNING.tobs_minigames = nil
+calls = #exportCalls
+handlers["TOB_fh:drillResult"]("B1", 1, true)
+local skill, progress = false, false
+for i = calls + 1, #exportCalls do
+    if exportCalls[i].fn == "skillCheck" then skill = true end
+    if exportCalls[i].fn == "progressBar" then progress = true end
+end
+check("without tobs_minigames: skill check, then the progress bar", skill and progress and lastServer("TOB_fh:drillDone")[4] == true)
+-- sounds from the server
+handlers["tobs_bankrobbery:bankSound"]("B1", "drill_on", 1, 3, 40.0)
+check("far from the bank: no drill sound", (CALLS.PlaySoundFromCoord or 0) == 0)
+PEDPOS = TOB.Banks.B1.boxes[1]
+handlers["tobs_bankrobbery:bankSound"]("B1", "drill_on", 1, 3, 40.0)
+check("near the bank: the drill is heard", CALLS.PlaySoundFromCoord == 1)
+handlers["tobs_bankrobbery:bankSound"]("B1", "drill_on", 1, 7, 40.0)
+check("the driller doesn't hear it twice", CALLS.PlaySoundFromCoord == 1)
+PEDPOS = vector3(1000, 1000, 0)
 
 for _, name in ipairs({"StartHeist", "StartGrab", "RequestLoot", "SpawnTrolleys", "DrillBox", "UseGate", "UseVaultItem", "ToggleDoor", "DoorThreads", "RegisterTargets", "CleanBankProps"}) do
     check(name .. " defined", rawget(_G, name) ~= nil)

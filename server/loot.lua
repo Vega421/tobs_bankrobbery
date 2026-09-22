@@ -42,7 +42,17 @@ local function Pay(src, g)
     local owedWorth = math.floor(g.worth * frac)
     local worth, cash, items = 0, 0, 0
 
-    if g.marked then
+    if TestPayoutBlocked(g.bank) then
+        -- a test heist (/tobtest): nothing is paid, but the loot counter shows what would have been
+        worth = owedWorth - g.paidWorth
+        if worth <= 0 then return end
+        g.paidWorth = owedWorth
+        local mine = RecordPayout(g.bank, src, worth, 0, 0)
+        if TOB.LootCounter then
+            TriggerClientEvent("TOB_fh:grabbed", src, worth, Money(mine))
+        end
+        return
+    elseif g.marked then
         worth = owedWorth - g.paidWorth
         if worth <= 0 then return end
         g.paidWorth = owedWorth
@@ -82,7 +92,7 @@ end
 -- The grab is over: marked bills are handed out, and the dye pack or GPS tracker goes off
 local function Finish(src, g)
     Looting[src] = nil
-    if g.marked and g.paidWorth > 0 then
+    if g.marked and g.paidWorth > 0 and not TestPayoutBlocked(g.bank) then
         if Bridge.AddItem(src, TOB.MarkedBillsItem or "markedbills", 1, {worth = g.paidWorth}) then
             RecordPayout(g.bank, src, g.paidWorth, 0, 1, TOB.MarkedBillsItem or "markedbills")
         else

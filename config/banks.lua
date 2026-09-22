@@ -9,6 +9,10 @@ TOB.door = "v_ilev_cbankvaulgate01"
 -- Optional per bank: cash = {min = ..., max = ...} (a full trolley, instead of TOB.TrolleyCash) and
 -- cooldown = seconds (instead of TOB.cooldown).
 -- enabled = false hides a bank. doors.secondloc adds an inner gate the robber has to hack (like Fleeca).
+-- minigames = {hack = ..., drill = ...} plays tobs_minigames' games at this bank (optional resource:
+-- https://github.com/Vega421/tobs_minigames): any game name ("hack" = GTA's laptop, "drill" = GTA's drill,
+-- "thermite", "keypad", ...) or {type = "thermite", difficulty = "hard"}. Without tobs_minigames the bank
+-- uses TOB.HackMinigame / TOB.DrillMinigame. The games' own settings are in tobs_minigames' config.lua.
 -- Fleeca positions are from utkuali/Fleeca-Bank-Heists (GPL-3.0). Deposit box positions (boxes) are from
 -- qbcore-framework/qb-bankrobbery (GPL-3.0).
 TOB.Banks = {
@@ -16,6 +20,7 @@ TOB.Banks = {
         label = "Paleto Bay (Blaine County Savings)",
         enabled = true,
         alarm = "PALETO_BAY_SCORE_ALARM",
+        minigames = {hack = "hack", drill = "drill"}, -- GTA's hacking laptop and drill (with tobs_minigames)
         doors = {
             startloc = {x = -105.44020080566, y = 6472.8505859375, z = 31.62672996521, h = 10.240501403809, animcoords = {x = -105.46078491211, y = 6471.5737304688, z = 30.626703262329, h = 43.363094329834}}
         },

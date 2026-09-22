@@ -25,7 +25,8 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 - Cash, gold and diamond trolleys, with a live loot counter
 - The server runs the whole heist: anti-cheat, Discord logs, saved cooldowns and an admin reset command
 - Uses ox_lib, ox_target, ox_inventory and ps-dispatch (or your dispatch script) when you have them
-- Any hacking minigame: ox_lib's, none, or your own
+- Any hacking minigame: ox_lib's, none, or your own; with [tobs_minigames](https://github.com/Vega421/tobs_minigames) each bank can play its own (Paleto: GTA's hacking laptop and drill)
+- Admin tools: pause heists (`/tobpause`), test mode without cooldowns or pay (`/tobtest`), a setup check (`/tobcheck`) and refusals that say why a heist can't start
 - If the robber disconnects, the nearest crew member takes over
 - Events and exports for other resources (`IsHeistActive`, `heistStarted`, ...)
 - Rewards as cash, dirty money, items or marked bills; cash and cooldown per bank; optional thermite-style vault step
@@ -39,18 +40,19 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 1. Download the zip from [Releases](https://github.com/Vega421/tobs_bankrobbery/releases/latest) and unzip it into `resources/`.
 2. Add the items for your inventory from the `install/` folder (`esx.sql`, `ox_inventory.lua`, `qb-core.lua` or `vrp.lua`).
 3. Set your police job (`TOB.PoliceJob`, or `TOB.PoliceGroup` on vRP) in `config/config.lua`.
-4. Add `ensure tobs_bankrobbery` to `server.cfg` below your framework.
+4. Add `ensure tobs_bankrobbery` to `server.cfg` below your framework (and below tobs_minigames, if you use it).
+5. Give admins the commands in `server.cfg`: `add_ace group.admin command.tobreset allow`, and the same for `tobpause`, `tobtest` and `tobcheck`.
 
 See the [installation guide](https://vega421.github.io/scripts/tobs-bankrobbery/installation/) for details.
 
-**Requires:** one of qbx_core, es_extended, qb-core or vrp · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) (optional)
+**Requires:** one of qbx_core, es_extended, qb-core or vrp · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) (optional) · [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional)
 
 ## Development
 
 Framework code lives only in `bridge/<framework>/`; everything else is shared. The server runs the heist (`server/heist.lua`); the client plays the animations and asks the server. Run the tests with Lua 5.4 from the repo root:
 
 ```bash
-lua5.4 tests/server_test.lua && lua5.4 tests/bridge_test.lua && lua5.4 tests/client_test.lua
+lua5.4 tests/server_test.lua && lua5.4 tests/bridge_test.lua && lua5.4 tests/client_test.lua && lua5.4 tests/minigames_test.lua && lua5.4 tests/tools_test.lua
 ```
 
 ## Credits and license

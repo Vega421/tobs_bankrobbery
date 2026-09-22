@@ -83,6 +83,8 @@ SV.Webhook = "https://discord.test/hook"
 local dispatched = nil
 SV.DispatchAlert = function(bank, coords, src) dispatched = {bank = bank, src = src} end
 kvp["lastrobbed:F2"] = os.time() -- a cooldown saved before a restart
+-- admin tools (tested on their own in tests/tools_test.lua): run their startup thread for the commands
+dofile("locales/tools.lua"); dofile("server/tools.lua"); threads[#threads]()
 for _, f in ipairs({"server/util.lua", "server/heist.lua", "server/loot.lua", "server/tracker.lua", "server/boxes.lua", "server/doors.lua", "server/admin.lua", "server/api.lua"}) do
     dofile(f)
 end
@@ -127,7 +129,7 @@ check("fleeca gate locked by default", Doors.F1[1].locked == true and Doors.B1[1
 -- 1. no cops
 COPS = 0; INV[1] = {id_card_f = 1}
 fire(1, "TOB_fh:startcheck", "B1")
-check("no cops message", last("TOB_fh:outcome").args[2] == L("no_cops"))
+check("no cops message", last("TOB_fh:outcome").args[2] == PoliceRefusal(TOB.mincops, 0))
 -- 2. start
 COPS = 4; clear(); now = now + 3000
 fire(1, "TOB_fh:startcheck", "B1")
@@ -142,7 +144,7 @@ check("export IsHeistActive", exported.IsHeistActive("B1") == true and exported.
 -- 3. busy + rate limit
 INV[2] = {id_card_f = 1}; clear()
 fire(2, "TOB_fh:startcheck", "B1")
-check("busy message", last("TOB_fh:outcome").args[2] == L("busy"))
+check("busy message", last("TOB_fh:outcome").args[2] == RefusalText("busy"))
 clear(); fire(2, "TOB_fh:startcheck", "B1")
 check("start spam is rate limited", last("TOB_fh:outcome") == nil)
 
@@ -240,7 +242,7 @@ check("end log has the reason and the payout", endlog:find("all trolleys were lo
 -- 11. cooldown, admin reset
 INV[1].id_card_f = 1; at(1, start("B1")); now = now + 3000; clear()
 fire(1, "TOB_fh:startcheck", "B1")
-check("cooldown message", last("TOB_fh:outcome").args[2]:find(L("cooldown", ""):sub(1, 20), 1, true))
+check("cooldown message", last("TOB_fh:outcome").args[2]:find(LX("refuse_cooldown", ""):sub(1, 20), 1, true))
 commands[SV.ResetCommand](0, {})
 check("reset clears the cooldown", TOB.Banks.B1.lastrobbed == 0 and kvp["lastrobbed:B1"] == 0)
 check("reset tells clients", last("TOB_fh:forceReset") ~= nil)
@@ -252,7 +254,7 @@ fire(1, "TOB_fh:hackFailed", "B1")
 check("failed hack ends the heist", Heists.B1 == nil and last("TOB_fh:heistFailed").args[2] == "hack_failed")
 commands[SV.ResetCommand](0, {"B1"})
 begin("B1", 1); clear()
-tick(91000)
+tick(TOB.CardTime * 1000 + 1000)
 check("minigame never finished -> heist ends", Heists.B1 == nil and last("TOB_fh:heistFailed") ~= nil)
 commands[SV.ResetCommand](0, {"B1"})
 
@@ -398,20 +400,20 @@ check("alarm switched off", last("TOB_fh:alarm") and last("TOB_fh:alarm").args[2
 -- 21. crew, one at a time, global cooldown, restart protection, missing card
 TOB.MinCrew = 2; INV[1].id_card_f = 1; at(1, start("B1")); at(2, vector3(0, 0, 1)); at(3, vector3(0, 0, 1)); now = now + 3000; clear()
 fire(1, "TOB_fh:startcheck", "B1")
-check("crew too small", last("TOB_fh:outcome").args[2] == L("need_crew", 2))
+check("crew too small", last("TOB_fh:outcome").args[2] == RefusalText("crew", 2, 1))
 at(2, start("B1")); now = now + 3000; clear()
 fire(1, "TOB_fh:startcheck", "B1")
 check("crew big enough", last("TOB_fh:outcome").args[1] == true)
 TOB.MinCrew = 1; TOB.OneAtATime = true
 INV[3] = {id_card_f = 1}; at(3, start("F2")); TOB.Banks.F2.lastrobbed = 0; clear()
 fire(3, "TOB_fh:startcheck", "F2")
-check("one at a time", last("TOB_fh:outcome").args[2] == L("global_busy"))
+check("one at a time", last("TOB_fh:outcome").args[2] == RefusalText("one_at_a_time"))
 TOB.OneAtATime = false
 commands[SV.ResetCommand](0, {"B1"})
 TOB.GlobalCooldown = 300
 begin("B1", 1); fire(1, "TOB_fh:hackFailed", "B1")
 now = now + 3000; clear(); fire(3, "TOB_fh:startcheck", "F2")
-check("global cooldown", last("TOB_fh:outcome").args[2]:find(L("global_cooldown", ""):sub(1, 15), 1, true) ~= nil)
+check("global cooldown", last("TOB_fh:outcome").args[2]:find(LX("refuse_global_cooldown", ""):sub(1, 15), 1, true) ~= nil)
 TOB.GlobalCooldown = 0
 handlers["txAdmin:events:scheduledRestart"]({secondsRemaining = 1800})
 now = now + 3000; clear(); fire(3, "TOB_fh:startcheck", "F2")
@@ -419,7 +421,7 @@ check("30 min warning doesn't block", last("TOB_fh:outcome").args[1] == true)
 commands[SV.ResetCommand](0, {}); INV[3].id_card_f = 1
 handlers["txAdmin:events:scheduledRestart"]({secondsRemaining = 900})
 now = now + 3000; clear(); fire(3, "TOB_fh:startcheck", "F2")
-check("15 min warning blocks", last("TOB_fh:outcome").args[2] == L("restart_soon"))
+check("15 min warning blocks", last("TOB_fh:outcome").args[2] == RefusalText("restart"))
 handlers["txAdmin:events:scheduledRestartSkipped"]({})
 REMOVE_OK = false; now = now + 3000; clear(); fire(3, "TOB_fh:startcheck", "F2")
 check("card that can't be taken -> no heist", last("TOB_fh:outcome").args[1] == false and Heists.F2 == nil)
@@ -562,6 +564,49 @@ now = now + 18500; fire(2, "TOB_fh:rewardCash")
 commands[SV.ResetCommand](0, {})
 check("grab finished when the heist ends", #METADATA == 1 and METADATA[1].metadata.worth == 30000 and Looting[2] == nil)
 TOB.MarkedBills = false; Bridge.Metadata = nil
+
+-- 33. admin tools in the heist (server/tools.lua): pause, refusals, test mode, bank sounds
+commands[SV.PauseCommand](0, {"server", "event"}); clear()
+begin("B1", 1)
+check("paused: heist refused with the reason", last("TOB_fh:outcome").args[2] == PauseRefusal() and Heists.B1 == nil)
+commands[SV.PauseCommand](0, {"off"}); clear()
+begin("B1", 1)
+check("allowed again after /tobpause off", Heists.B1 ~= nil)
+commands[SV.ResetCommand](0, {})
+POLICE[1] = true; clear(); begin("B1", 1)
+check("police get a refusal instead of silence", last("TOB_fh:outcome").args[2] == RefusalText("police_job"))
+POLICE[1] = nil
+TOB.Banks.B1.lastrobbed = os.time(); clear(); begin("B1", 1)
+check("cooldown refusal says how long", last("TOB_fh:outcome").args[2]:find(FormatDuration(TOB.cooldown):sub(1, 3), 1, true) ~= nil)
+-- test mode: no police needed, no cooldown, no pay
+commands[SV.TestCommand](1, {})
+COPS = 0; local robbedAt, lastEnd = TOB.Banks.B1.lastrobbed, LastHeistEnd; clear()
+openHeist("B1", 1)
+check("test mode skips the police and cooldown rules", Heists.B1 ~= nil and Heists.B1.stage == "open")
+check("test heist is labelled in the log", printedHas("[TEST] Heist started"))
+check("vault sound for everyone in the bank", last("tobs_bankrobbery:bankSound").args[2] == "vault" and last("tobs_bankrobbery:bankSound").target == -1)
+at(2, TOB.Banks.B1.trolley1); local m33 = MONEY[2] or 0; clear()
+fire(2, "TOB_fh:lootup", "B1", "Loot1"); now = now + 40000; fire(2, "TOB_fh:grabDone")
+check("test heist: the trolley pays nothing", (MONEY[2] or 0) == m33)
+check("... but the loot counter still counts", last("TOB_fh:grabbed") ~= nil and last("TOB_fh:grabbed").args[1] == 60000)
+TOB.DrillRewards = {{type = "money", min = 5000, max = 5000, chance = 1}}
+INV[2].drill = 1; at(2, TOB.Banks.B1.boxes[1]); clear()
+fire(2, "TOB_fh:drillBox", "B1", 1)
+local on = last("tobs_bankrobbery:bankSound")
+check("drill sound for everyone but the driller", on.args[2] == "drill_on" and on.args[3] == 1 and on.args[4] == 2)
+now = now + TOB.DrillTime; clear()
+fire(2, "TOB_fh:drillDone", "B1", 1, true)
+check("drill sound stops", last("tobs_bankrobbery:bankSound").args[2] == "drill_off")
+check("test heist: the box pays nothing but says what was inside", (MONEY[2] or 0) == m33 and last("TOB_fh:boxReward") ~= nil)
+at(2, TOB.Banks.B1.boxes[2]); fire(2, "TOB_fh:drillBox", "B1", 2); clear()
+tick(TOB.timer * 1000); tick((TOB.VaultCloseDelay or 30) * 1000); tick(10000)
+check("test heist ends normally", Heists.B1 == nil and printedHas("[TEST] Heist ended"))
+check("a heist ending mid-drill stops the drill sound", last("tobs_bankrobbery:bankSound") ~= nil and last("tobs_bankrobbery:bankSound").args[2] == "drill_off")
+check("test heist sets no cooldown", TOB.Banks.B1.lastrobbed == robbedAt and LastHeistEnd == lastEnd)
+commands[SV.TestCommand](1, {}); COPS = 4
+clear(); begin("B1", 1)
+check("test mode off: the rules apply again", last("TOB_fh:outcome").args[1] == false)
+commands[SV.ResetCommand](0, {})
 
 realprint(("%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)
