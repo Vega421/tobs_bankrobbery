@@ -9,10 +9,6 @@
 -- TOB.DrillMinigame.
 
 local Global = {hack = "HackMinigame", drill = "DrillMinigame"}
-local Presets = {
-    gta_pc = function(opts) return TOBHack.Start(opts) end,
-    gta_drill = function(opts) return TOBDrill.Start(opts) end,
-}
 
 -- The minigame setting for this bank and step ("hack" or "drill")
 function MinigameSetting(bank, kind)
@@ -21,14 +17,26 @@ function MinigameSetting(bank, kind)
     return TOB[Global[kind]]
 end
 
--- Runs the bank's minigame and returns true/false (for the hack; drilling uses DrillBoxMinigame below). GTA presets and functions run here; any other
--- value goes to fallback(value), the resource's normal minigame code.
-function RunMinigame(bank, kind, fallback)
-    local v = MinigameSetting(bank, kind)
+-- Splits a setting into its name and options: "gta_pc" or {type = "gta_pc", lives = 3}
+local function Preset(v)
+    if type(v) == "table" and v.type then return v.type, v end
+    return v, nil
+end
+
+-- The bank's hack minigame; returns true/false. The GTA laptop and function settings run here;
+-- any other value goes to fallback(value), the resource's own minigame code. If the laptop can't
+-- load, fallback gets the global setting instead ("ox_lib" if that is the laptop too).
+function BankHackMinigame(bank, fallback)
+    local v = MinigameSetting(bank, "hack")
     if type(v) == "function" then return v(bank) == true end
-    local name, opts = v, nil
-    if type(v) == "table" and v.type then name, opts = v.type, v end
-    if Presets[name] then return Presets[name](opts) == true end
+    local name, opts = Preset(v)
+    if name == "gta_pc" then
+        local ok = TOBHack.Start(opts)
+        if ok ~= nil then return ok == true end
+        v = TOB.HackMinigame
+        if type(v) == "function" then return v(bank) == true end
+        if Preset(v) == "gta_pc" then v = "ox_lib" end
+    end
     return fallback(v) == true
 end
 
@@ -39,8 +47,7 @@ end
 -- progress bar of TOB.DrillTime.
 function DrillBoxMinigame(bank, check)
     local v = MinigameSetting(bank, "drill")
-    local name, opts = v, nil
-    if type(v) == "table" and v.type then name, opts = v.type, v end
+    local name, opts = Preset(v)
     if name == "gta_drill" then return TOBDrill.Start(opts) == true end
     if type(v) == "function" then
         if v(bank) ~= true then return false end
