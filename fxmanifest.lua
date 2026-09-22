@@ -19,6 +19,9 @@ client_scripts {
     "bridge/esx/client.lua",
     "bridge/qb/client.lua",
     "bridge/vrp/client.lua",
+    "client/drill.lua",
+    "client/hack.lua",
+    "client/minigames.lua",
     "client/main.lua",
 }
 
