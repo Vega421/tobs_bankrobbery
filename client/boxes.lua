@@ -30,12 +30,9 @@ AddEventHandler("TOB_fh:drillResult", function(bank, box, ok, reason)
     PlaySoundFromEntity(sound, "Drill", drill, "DLC_HEIST_FLEECA_SOUNDSET", true, 0)
     DisableInput = true
 
-    local passed = DrillMinigame(bank, box)
-    if passed then
-        passed = Progress(TOB.DrillTime, L("drilling")) and not IsEntityDead(ped)
-    else
-        Notify("error", L("drill_failed"))
-    end
+    -- the minigame and the drilling time (client/minigames.lua): the GTA drill screen, or the skill check + progress bar
+    local passed = DrillBoxMinigame(bank, function(v) return DrillMinigame(bank, box, v) end)
+    if not passed then Notify("error", L("drill_failed")) end
 
     StopSound(sound)
     ReleaseSoundId(sound)

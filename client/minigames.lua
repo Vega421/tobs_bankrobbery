@@ -34,10 +34,14 @@ local function Game(v)
     return nil
 end
 
--- Plays a tobs_minigames game: true / false, or nil when it can't (not running, a GTA screen missing)
+-- Plays a tobs_minigames game: true / false, or nil when it can't (not running, a GTA screen missing).
+-- Without tobs_minigames' own animation: the heist already plays the laptop scene and the drill.
 local function Play(name, opts)
     if GetResourceState("tobs_minigames") ~= "started" then return nil end
-    local ok, result = pcall(function() return exports.tobs_minigames:Start(name, opts) end)
+    local o = {}
+    for k, v in pairs(opts or {}) do o[k] = v end
+    o.animate = false
+    local ok, result = pcall(function() return exports.tobs_minigames:Start(name, o) end)
     if not ok then return nil end
     return result
 end

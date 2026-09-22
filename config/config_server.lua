@@ -10,6 +10,16 @@ SV.LogAntiCheat = true -- also log blocked cheat attempts (max once a minute per
 --   add_ace group.admin command.tobreset allow
 SV.ResetCommand = "tobreset"
 
+-- More admin commands (give admins the same kind of permission: add_ace group.admin command.<name> allow)
+SV.PauseCommand = "tobpause" -- /tobpause [reason] stops new heists server-wide, /tobpause off allows them again
+SV.TestCommand = "tobtest"   -- /tobtest: test mode for you: skip the police, crew and cooldown rules, set no cooldowns
+SV.TestModePayouts = false   -- true = test heists still pay
+SV.CheckCommand = "tobcheck" -- /tobcheck: list what's missing or set up wrong (items, resources, permissions)
+SV.HealthCheck = true        -- also run that check in the console a few seconds after the resource starts
+
+SV.ShowPoliceCount = false -- "not enough police" also says how many are needed and on duty
+SV.BankSoundRange = 40.0   -- meters around the drill and the vault door where other players hear them
+
 -- Block new heists this many minutes before a txAdmin scheduled restart (0 = off).
 -- txAdmin warns at 30, 15, 10, 5, 4, 3, 2 and 1 minutes, so the block starts at the first warning inside this window.
 SV.BlockBeforeRestart = 15

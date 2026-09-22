@@ -75,19 +75,23 @@ local function CustomMinigame(fn, ...)
     return result == true
 end
 
--- The hacking minigame (TOB.HackMinigame). Returns true when passed.
-function HackMinigame(bank)
-    local m = TOB.HackMinigame
+-- The hacking minigame. m = the setting to play (TOB.HackMinigame when nil; client/minigames.lua passes
+-- a bank's own setting): "ox_lib", "none", a function or a list of ox_lib difficulties. Returns true when passed.
+function HackMinigame(bank, m)
+    if m == nil then m = TOB.HackMinigame end
     if TOB.Minigame == false or m == "none" or m == false then return true end
     if type(m) == "function" then return CustomMinigame(m, bank) end
     if GetResourceState("ox_lib") ~= "started" then return true end
-    return exports.ox_lib:skillCheck(TOB.MinigameDifficulty, TOB.MinigameKeys) == true
+    local difficulty = type(m) == "table" and #m > 0 and m or TOB.MinigameDifficulty
+    return exports.ox_lib:skillCheck(difficulty, TOB.MinigameKeys) == true
 end
 
--- The drilling minigame (TOB.DrillMinigame). Returns true when passed.
-function DrillMinigame(bank, box)
-    local m = TOB.DrillMinigame
+-- The drilling minigame. m = the setting to play (TOB.DrillMinigame when nil): a list of ox_lib
+-- difficulties, "ox_lib", "none" or a function. Returns true when passed.
+function DrillMinigame(bank, box, m)
+    if m == nil then m = TOB.DrillMinigame end
     if type(m) == "function" then return CustomMinigame(m, bank, box) end
+    if m == "ox_lib" then m = {"easy", "medium"} end
     if type(m) ~= "table" or #m == 0 or GetResourceState("ox_lib") ~= "started" then return true end
     return exports.ox_lib:skillCheck(m, TOB.MinigameKeys) == true
 end

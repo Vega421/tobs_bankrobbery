@@ -69,7 +69,10 @@ VaultMoved = {}     -- [bank] = GetGameTimer() of the last vault open/close, so 
 RestartSoon = false -- set when txAdmin announces a restart (SV.BlockBeforeRestart)
 LastHeistEnd = LoadLastHeistEnd() -- os.time() the last heist on any bank ended (TOB.GlobalCooldown)
 
-local CARD_TIMEOUT = 90000  -- ms the robber has for the card, the laptop and the minigame
+-- ms the robber has for the card, the laptop and the minigame (TOB.CardTime)
+local function CardTimeout()
+    return (TOB.CardTime or 150) * 1000
+end
 local OWNER_RADIUS = 30.0   -- the heist leader has to stay this close to the start panel
 local CLEANUP_DELAY = 10000 -- ms between the vault closing and the props being removed
 
@@ -100,10 +103,6 @@ end
 
 function BankCash(bank)
     return TOB.Banks[bank].cash or TOB.TrolleyCash
-end
-
-local function CooldownLeft(bank)
-    return Clock(BankCooldown(bank) - (os.time() - TOB.Banks[bank].lastrobbed))
 end
 
 -- TROLLEYS SPAWNED BY THE SERVER (TOB.TrolleySpawn) --
@@ -203,6 +202,7 @@ end
 function EndHeist(bank, reason, cooldown)
     FinishBankGrabs(bank) -- grabs still running are paid out first
     local h = Heists[bank]
+    local test = EndTestHeist(bank) -- a test heist (/tobtest) sets no cooldown
     if h ~= nil then
         local lines, totalWorth, totalCash = {}, 0, 0
         for _, p in pairs(h.payouts) do
@@ -221,15 +221,22 @@ function EndHeist(bank, reason, cooldown)
         if TOB.Alarm and TOB.Banks[bank].alarm then
             TriggerClientEvent("TOB_fh:alarm", -1, bank, false)
         end
-        Log("Heist ended: " .. BankName(bank), ("Reason: %s\nDuration: %s\nTotal: $%s\n%s"):format(
+        Log((test and "[TEST] " or "") .. "Heist ended: " .. BankName(bank),("Reason: %s\nDuration: %s\nTotal: $%s\n%s"):format(
             reason, Duration(os.time() - h.started), Money(totalWorth), #lines > 0 and table.concat(lines, "\n") or "Nobody was paid."), 15105570)
         HeistEnded(bank, reason, totalWorth)
         DeleteServerTrolleys(h)
+        for box, state in pairs(h.boxes) do
+            if state.busy then BankSound(bank, "drill_off", box) end
+        end
     end
 
-    TOB.Banks[bank].lastrobbed = cooldown == false and 0 or os.time()
-    SaveCooldown(bank, TOB.Banks[bank].lastrobbed)
-    if cooldown ~= false and h ~= nil then
+    if test then
+        -- the bank's cooldown and the global cooldown stay as they were
+    else
+        TOB.Banks[bank].lastrobbed = cooldown == false and 0 or os.time()
+        SaveCooldown(bank, TOB.Banks[bank].lastrobbed)
+    end
+    if cooldown ~= false and h ~= nil and not test then
         LastHeistEnd = os.time()
         SaveLastHeistEnd(LastHeistEnd)
     end
@@ -260,6 +267,7 @@ function OpenVault(bank)
     Doors[bank][2].locked = false
     VaultMoved[bank] = GetGameTimer()
     TriggerClientEvent("TOB_fh:toggleVault", -1, bank, false)
+    BankSound(bank, "vault") -- everyone in the bank hears the vault door (client/sounds.lua)
     SetStage(bank, "open", TOB.timer * 1000)
     TOB.Banks[bank].special = h.special
     h.serverTrolleys = ServerTrolleys()
@@ -341,32 +349,41 @@ RegisterServerEvent("TOB_fh:startcheck")
 AddEventHandler("TOB_fh:startcheck", function(bank)
     local _source = source
 
-    if TOB.Banks[bank] == nil or TooSoon(_source, "start", 2000) or Bridge.IsPolice(_source) then return end
+    if TOB.Banks[bank] == nil or TooSoon(_source, "start", 2000) then return end
+    local function Refuse(text) TriggerClientEvent("TOB_fh:outcome", _source, false, text) end
+    if Bridge.IsPolice(_source) then return Refuse(RefusalText("police_job")) end
     if not IsNear(_source, TOB.Banks[bank].doors.startloc, 5.0) then
         Flag(_source, "Tried to start the heist at " .. tostring(bank) .. " from far away.")
         return
     end
 
+    -- test mode (/tobtest) skips the police, crew, cooldown, global cooldown and one-at-a-time rules
+    local rules = not IsTester(_source)
     local globalLeft = (TOB.GlobalCooldown or 0) > 0 and TOB.GlobalCooldown - (os.time() - LastHeistEnd) or 0
+    local bankLeft = BankCooldown(bank) - (os.time() - TOB.Banks[bank].lastrobbed)
+    local cops = rules and Bridge.CountPolice() or 0
+    local crew = rules and CrewNear(bank) or 0
 
-    if RestartSoon then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("restart_soon"))
-    elseif TOB.OneAtATime and AnyHeistActive() and Heists[bank] == nil then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("global_busy"))
-    elseif globalLeft > 0 then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("global_cooldown", Clock(globalLeft)))
-    elseif Bridge.CountPolice() < TOB.mincops then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("no_cops"))
-    elseif CrewNear(bank) < (TOB.MinCrew or 1) then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("need_crew", TOB.MinCrew))
+    if HeistsPaused() then
+        Refuse(PauseRefusal())
+    elseif RestartSoon then
+        Refuse(RefusalText("restart"))
+    elseif rules and TOB.OneAtATime and AnyHeistActive() and Heists[bank] == nil then
+        Refuse(RefusalText("one_at_a_time"))
+    elseif rules and globalLeft > 0 then
+        Refuse(CooldownRefusal(globalLeft, true))
+    elseif rules and cops < TOB.mincops then
+        Refuse(PoliceRefusal(TOB.mincops, cops))
+    elseif rules and crew < (TOB.MinCrew or 1) then
+        Refuse(RefusalText("crew", TOB.MinCrew or 1, crew))
     elseif not Bridge.HasItem(_source, "id_card_f", 1) then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("no_card"))
+        Refuse(L("no_card"))
     elseif Heists[bank] ~= nil then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("busy"))
-    elseif (os.time() - BankCooldown(bank)) <= TOB.Banks[bank].lastrobbed then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("cooldown", CooldownLeft(bank)))
+        Refuse(RefusalText("busy"))
+    elseif rules and bankLeft >= 0 then
+        Refuse(CooldownRefusal(math.max(1, bankLeft)))
     elseif not Bridge.RemoveItem(_source, "id_card_f", 1) then
-        TriggerClientEvent("TOB_fh:outcome", _source, false, L("no_card"))
+        Refuse(L("no_card"))
     else
         local special = nil
         local kinds = {}
@@ -377,6 +394,7 @@ AddEventHandler("TOB_fh:startcheck", function(bank)
         end
         Heists[bank] = {owner = _source, started = os.time(), looted = {}, payouts = {}, boxes = {}, special = special}
         SetStage(bank, "card")
+        local test = StartTestHeist(bank, _source) -- no cooldown and no pay (server/tools.lua)
         TOB.Banks[bank].onaction = true
         -- the inner gate stays locked until the robber hacks it
         if GateLockedByDefault(bank) and not Doors[bank][1].locked then
@@ -390,7 +408,7 @@ AddEventHandler("TOB_fh:startcheck", function(bank)
             TriggerClientEvent("TOB_fh:alarm", -1, bank, true)
         end
         TriggerClientEvent("TOB_fh:policenotify", -1, bank)
-        Log("Heist started: " .. BankName(bank), PlayerLabel(_source) .. " started a heist.", 16740396)
+        Log((test and "[TEST] " or "") .. "Heist started: " .. BankName(bank), PlayerLabel(_source) .. " started a heist.", 16740396)
         HeistStarted(bank, _source)
     end
 end)
@@ -508,7 +526,7 @@ end)
 
 -- Longest a heist can possibly take; a heist running longer is ended (safety net)
 local function MaxHeistSeconds()
-    return math.ceil((CARD_TIMEOUT + TOB.hacktime + (TOB.VaultItemTime or 0) + CLEANUP_DELAY) / 1000)
+    return math.ceil((CardTimeout() + TOB.hacktime + (TOB.VaultItemTime or 0) + CLEANUP_DELAY) / 1000)
         + TOB.timer * 2 + (TOB.VaultCloseDelay or 30) + 300
 end
 
@@ -523,7 +541,7 @@ function HeistTick()
             CloseVault(bank)
             EndHeist(bank, "it ran too long and was ended automatically")
         elseif stage == "card" then
-            if now - h.stageAt > CARD_TIMEOUT then FailHeist(bank, "hack_failed") end
+            if now - h.stageAt > CardTimeout() then FailHeist(bank, "hack_failed") end
         elseif stage == "hacking" then
             if now >= h.ends then HackDone(bank) end
         elseif stage == "vaultitem" then

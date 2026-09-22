@@ -4,9 +4,23 @@ All notable changes to tobs_bankrobbery. Each version is also a [GitHub release]
 
 Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
-## 2.1.0 · 2026-09-21
+## 2.1.0 · 2026-09-22
 
-A security and reliability update: the server now runs the whole heist, and trolleys pay by the time spent grabbing.
+A security and reliability update: the server now runs the whole heist, and trolleys pay by the time spent grabbing. Plus minigames per bank and admin tools.
+
+**Minigames**
+- **Minigames per bank** with [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional): set `minigames = {hack = ..., drill = ...}` on a bank in `config/banks.lua`. Any of its games works, with a difficulty: `{type = "thermite", difficulty = "hard"}`
+- **Paleto plays GTA's hacking laptop and GTA's drill** when tobs_minigames is running. The drill screen replaces the progress bar and never finishes faster than `TOB.DrillTime`
+- Without tobs_minigames, or when a GTA screen doesn't load, the bank's normal minigame runs instead. A bank can also set its own ox_lib difficulties: `hack = {"medium", "hard"}`
+- `TOB.CardTime` (default 150 seconds): time for the card, the laptop and the minigame before the heist fails. It was a fixed 90 seconds, too short for the laptop on easy
+
+**Admin tools**
+- **`/tobpause [reason]`** stops new heists server-wide (running heists go on); `/tobpause off` allows them again
+- **`/tobtest`** turns on test mode for you: your heists skip the police, crew and cooldown rules, set no cooldowns and pay nothing (`SV.TestModePayouts`). They're marked `[TEST]` in the Discord log
+- **`/tobcheck`** lists missing items, resources and permissions; it also runs in the console when the resource starts (`SV.HealthCheck`)
+- **Clearer refusals:** a heist that can't start says why, including how long the cooldown has left. `SV.ShowPoliceCount` also says how many police are needed
+- **Everyone in the bank hears the drill and the vault door** (`SV.BankSoundRange`)
+- Give admins the commands: `add_ace group.admin command.tobpause allow` (and `tobtest`, `tobcheck`)
 
 **Security**
 - The server runs every step of the heist and its timers (hack, vault item, inner gate, security timer, vault closing). Cheaters can no longer skip the hack, open the vault early, loot before the vault is open, or keep the vault open

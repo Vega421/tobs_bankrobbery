@@ -29,7 +29,10 @@ TOB.GlobalCooldown = 0 -- seconds after any heist before any bank can be robbed 
 --   TOB.HackMinigame = function(bank)
 --       return exports["my_minigame"]:Start(...) -- see that resource's documentation
 --   end
+-- A bank can play its own minigame with tobs_minigames: see minigames in config/banks.lua.
 TOB.HackMinigame = "ox_lib"
+TOB.CardTime = 150 -- seconds the robber has for the card, the laptop and the minigame before the heist fails
+                   -- (tobs_minigames' laptop gives up to 90 s on easy, plus its how-to card and the animation)
 TOB.MinigameDifficulty = {"easy", "easy", "medium", "medium"} -- ox_lib: one entry per round: "easy", "medium" or "hard"
 TOB.MinigameKeys = {"w", "a", "s", "d"} -- ox_lib: keys the skill check can ask for
 
