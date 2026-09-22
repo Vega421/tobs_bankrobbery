@@ -64,11 +64,13 @@ check("an erroring export: the normal minigame instead", BankHackMinigame("B1", 
 reset(); running = false; TOB.HackMinigame = "hack"; fallbackGot = nil
 BankHackMinigame("B1", fallback)
 check("... and if the global is a tobs_minigames game too: ox_lib", fallbackGot == "ox_lib")
+-- function settings go to the resource's own code (which runs them safely), like its HackMinigame(bank, v)
+local function own(bank) return function(v) if type(v) == "function" then return v(bank) end return true end end
 TOB.HackMinigame = function(bank) FUNC_BANK = bank return true end
-check("... and if the global is a function: it runs", BankHackMinigame("B1", fallback) == true and FUNC_BANK == "B1")
+check("... and if the global is a function: it runs (through the resource's own code)", BankHackMinigame("B1", own("B1")) == true and FUNC_BANK == "B1" and #played == 0)
 TOB.HackMinigame = "ox_lib"
 reset()
-check("a function setting gets the bank", BankHackMinigame("F4", function() error("no fallback") end) == true)
+check("a function setting goes to the resource's own code, with the bank", BankHackMinigame("F4", own("F4")) == true and #played == 0)
 
 -- Drilling a deposit box
 reset()
@@ -94,7 +96,9 @@ check("a bank without a setting: the skill check with the global value, then the
 reset()
 check("a failed skill check: no progress bar", DrillBoxMinigame("F1", function() return false end) == false and progress == 0)
 reset()
-check("a function setting, then the progress bar", DrillBoxMinigame("F4") == true and progress == 1)
+local gotFn
+check("a function setting goes to the skill check code, then the progress bar",
+      DrillBoxMinigame("F4", function(v) gotFn = type(v) == "function" return v() end) == true and gotFn and progress == 1)
 reset(); progressOk = false
 check("an interrupted progress bar: not drilled", DrillBoxMinigame("F1") == false)
 

@@ -97,13 +97,8 @@ function HealthCheck()
     if type(TOB.DrillMinigame) == "table" and #TOB.DrillMinigame > 0 and not Started("ox_lib") then
         note("The drill's ox_lib skill check is skipped because ox_lib isn't running.")
     end
-    -- minigames played with tobs_minigames (client/minigames.lua) need it running
-    local Games = {hack = true, drill = true, safe = true, thermite = true, keypad = true, wires = true, lockpick = true,
-                   fingerprint = true, hotwire = true, lasers = true, keyfiling = true, tracker = true, gta_pc = true, gta_drill = true}
-    local function usesGame(v)
-        if type(v) == "table" and v.type then v = v.type end
-        return type(v) == "string" and Games[v]
-    end
+    -- minigames played with tobs_minigames (MinigameGame in client/minigames.lua, a shared script) need it running
+    local function usesGame(v) return MinigameGame(v) ~= nil end
     local users = {}
     if usesGame(TOB.HackMinigame) or usesGame(TOB.DrillMinigame) then users[#users + 1] = "the global settings" end
     for name, b in pairs(TOB.Banks or {}) do

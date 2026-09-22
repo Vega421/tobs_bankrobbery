@@ -20,6 +20,11 @@ function TriggerClientEvent(name, target, ...) clientEvents[#clientEvents + 1] =
 function PerformHttpRequest(url, cb, method, body) posts[#posts + 1] = {url = url, body = body} end
 json = {encode = function(t) return t.embeds[1].description end}
 function GetPlayerName(src) return "Admin" .. src end
+-- Log from server/util.lua (tested in tests/server_test.lua): console line + Discord post
+function Log(title, description)
+    print("[tobs_bankrobbery] " .. title .. ": " .. description)
+    if SV.Webhook ~= nil and SV.Webhook ~= "" then PerformHttpRequest(SV.Webhook, nil, "POST", json.encode({embeds = {{description = description}}})) end
+end
 local realPrint = print
 print = function(s) printed[#printed + 1] = s end
 
@@ -54,6 +59,7 @@ Framework = "qbox"
 function BlackMoneyItem() return "black_money" end
 
 dofile("locales/tools.lua")
+dofile("client/minigames.lua") -- shared script: MinigameGame for the health check
 dofile("server/tools.lua")
 dofile("server/healthcheck.lua")
 for _, t in ipairs(threads) do t() end -- the resource has loaded: settings and commands

@@ -120,7 +120,9 @@ local function openHeist(bank, src)
 end
 
 -- 0. startup
-check("OneSync warning printed when OneSync is off", printedHas("OneSync is off"))
+check("OneSync off: no second warning while the health check runs on start", not printedHas("OneSync is off"))
+SV.HealthCheck = false; dofile("server/util.lua"); SV.HealthCheck = true
+check("OneSync warning printed when the health check is off", printedHas("OneSync is off"))
 check("broken bank skipped with a warning", TOB.Banks.BROKEN == nil and printedHas("Bank BROKEN is missing"))
 check("disabled bank removed", TOB.Banks.F6 == nil)
 check("saved cooldown loaded after a restart", TOB.Banks.F2.lastrobbed == kvp["lastrobbed:F2"])
@@ -584,6 +586,7 @@ COPS = 0; local robbedAt, lastEnd = TOB.Banks.B1.lastrobbed, LastHeistEnd; clear
 openHeist("B1", 1)
 check("test mode skips the police and cooldown rules", Heists.B1 ~= nil and Heists.B1.stage == "open")
 check("test heist is labelled in the log", printedHas("[TEST] Heist started"))
+check("... and logged once, not twice", not printedHas("started a test heist"))
 check("vault sound for everyone in the bank", last("tobs_bankrobbery:bankSound").args[2] == "vault" and last("tobs_bankrobbery:bankSound").target == -1)
 at(2, TOB.Banks.B1.trolley1); local m33 = MONEY[2] or 0; clear()
 fire(2, "TOB_fh:lootup", "B1", "Loot1"); now = now + 40000; fire(2, "TOB_fh:grabDone")

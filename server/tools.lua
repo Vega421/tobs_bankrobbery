@@ -24,14 +24,9 @@ local function Name(src)
     return GetPlayerName(src) or ("player " .. tostring(src))
 end
 
--- Console line plus a short Discord message when SV.Webhook is set
+-- Console line plus a Discord message when SV.Webhook is set (Log in server/util.lua)
 local function ToolLog(text)
-    print("^3[tobs_bankrobbery]^7 " .. text)
-    if SV.Webhook == nil or SV.Webhook == "" then return end
-    PerformHttpRequest(SV.Webhook, function() end, "POST", json.encode({
-        username = "tobs_bankrobbery",
-        embeds = {{title = "Admin", description = text, color = 16750848}},
-    }), {["Content-Type"] = "application/json"})
+    Log("Admin", text, 16750848)
 end
 
 local function Tell(src, text)
@@ -76,8 +71,7 @@ end
 -- Call when a heist starts: remembers that it's a test heist. Returns true if it is.
 function StartTestHeist(bank, src)
     if not IsTester(src) then TestHeists[bank] = nil return false end
-    TestHeists[bank] = src
-    ToolLog(Name(src) .. " started a test heist at " .. tostring(bank) .. ".")
+    TestHeists[bank] = src -- the heist's own start log says [TEST]
     return true
 end
 

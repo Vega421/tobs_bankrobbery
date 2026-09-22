@@ -12,10 +12,10 @@ repository "https://github.com/Vega421/tobs_bankrobbery"
 -- first, so they only use the config, the bridges and the heist code once the resource has started.
 shared_scripts {
     "locales/tools.lua",
+    "client/minigames.lua", -- shared: the server's health check uses its list of games
 }
 
 client_scripts {
-    "client/minigames.lua",
     "client/sounds.lua",
 }
 
