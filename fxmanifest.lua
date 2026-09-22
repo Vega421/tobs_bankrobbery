@@ -7,6 +7,14 @@ description "Paleto and Fleeca bank heists for Qbox, ESX, QBCore and vRP"
 version "2.0.0"
 repository "https://github.com/Vega421/tobs_bankrobbery"
 
+-- Minigames: GTA drilling screen, GTA hacking laptop, per-bank minigames. Their own block so they
+-- merge without touching the lists below; they only use TOB, L and Progress once a game starts.
+client_scripts {
+    "client/drill.lua",
+    "client/hack.lua",
+    "client/minigames.lua",
+}
+
 shared_scripts {
     "config/config.lua",
     "locales/locales.lua",
@@ -19,9 +27,6 @@ client_scripts {
     "bridge/esx/client.lua",
     "bridge/qb/client.lua",
     "bridge/vrp/client.lua",
-    "client/drill.lua",
-    "client/hack.lua",
-    "client/minigames.lua",
     "client/main.lua",
 }
 
