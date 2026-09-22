@@ -18,9 +18,7 @@ jobs:
         run: lua5.4 tests/bridge_test.lua
       - name: Client tests
         run: lua5.4 tests/client_test.lua
-      - name: Drill minigame tests
-        run: lua5.4 tests/drill_test.lua
-      - name: Hack minigame tests
-        run: lua5.4 tests/hack_test.lua
+      - name: Minigames per bank
+        run: lua5.4 tests/minigames_test.lua
       - name: Admin tools tests
         run: lua5.4 tests/tools_test.lua

@@ -180,9 +180,12 @@ running.ox_lib = nil
 problems, notes = HealthCheck()
 check("no ox_lib: both skill checks noted", #problems == 0 and has(notes, "hack's ox_lib") and has(notes, "drill's ox_lib"))
 running.ox_lib = true
-TOB.HackGame = {timeLimit = 85}
-check("laptop time limit over the server window", has(select(2, HealthCheck()), "timeLimit is over 80 s"))
-TOB.HackGame = nil
+TOB.Banks.B1.minigames = {hack = "thermite"}
+check("a bank using tobs_minigames without it running", has(select(2, HealthCheck()), "Minigames for B1 need tobs_minigames"))
+running.tobs_minigames = true
+check("... fine when it runs", not has(select(2, HealthCheck()), "tobs_minigames"))
+running.tobs_minigames = nil
+TOB.Banks.B1.minigames = nil
 
 Framework = nil
 check("no framework", has(HealthCheck(), "No framework found"))
