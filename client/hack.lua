@@ -5,7 +5,7 @@
 -- HackingGame gist (neither has a license, so no code was copied from them).
 --
 -- TOBHack.Start(opts) blocks until done and returns true (hacked) or false (out of lives, out of time,
--- powered off, stopped or died). opts (all optional, also settable in TOB.HackGame):
+-- powered off, stopped or died), or nil if the laptop screen didn't load. opts (all optional, also settable in TOB.HackGame):
 --   lives       wrong picks allowed in HackConnect and BruteForce together (default 5)
 --   ipConnect   true = HackConnect.exe must be done before BruteForce.exe (default true)
 --   timeLimit   seconds before the hack fails (default 70; the server gives card + laptop + hack 90 s)
@@ -136,12 +136,6 @@ function TOBHack.Handle(sf, g, id, o, t)
     return nil
 end
 
--- Without the laptop screen: ox_lib skill check if it runs, otherwise the hack isn't blocked
-local function Fallback()
-    if GetResourceState("ox_lib") ~= "started" then return true end
-    return exports.ox_lib:skillCheck(TOB.MinigameDifficulty or {"easy", "medium", "medium"}, TOB.MinigameKeys) == true
-end
-
 function TOBHack.Start(opts)
     if TOBHack.active then return false end
     local o = Options(opts)
@@ -150,7 +144,7 @@ function TOBHack.Start(opts)
     local sf = RequestScaleformMovieSkipRenderWhilePaused("HACKING_PC") -- old name: RequestScaleformMovieInteractive
     local waited = 0
     while not HasScaleformMovieLoaded(sf) do
-        if waited >= 5000 then return Fallback() end
+        if waited >= 5000 then return nil end -- no laptop screen: the caller runs its normal minigame
         Citizen.Wait(10)
         waited = waited + 10
     end

@@ -12,7 +12,7 @@ function GetGameTimer() return now end
 -- Fake natives. Each frame, script(frame) can press keys; clicks answer with the next id in `answers`.
 local calls, method, params = {}, nil, nil
 local pressed, answers, frame, script = {}, {}, 0, nil
-local loaded, dead, oxlib, skill = true, false, true, true
+local loaded, dead = true, false
 local function record() calls[#calls + 1] = {method, table.unpack(params)} end
 function RequestScaleformMovieSkipRenderWhilePaused(n) calls[#calls + 1] = {"load " .. n} return 9 end
 function HasScaleformMovieLoaded() return loaded end
@@ -38,8 +38,6 @@ function PlayerPedId() return 1 end
 function IsEntityDead() return dead end
 local sounds = {}
 function PlaySoundFrontend(_, name) sounds[#sounds + 1] = name end
-function GetResourceState(r) return (r == "ox_lib" and oxlib) and "started" or "missing" end
-exports = {ox_lib = {skillCheck = function(_, d) SKILLED = d return skill end}}
 for _, n in ipairs({"SetTextFont", "SetTextScale", "SetTextColour", "SetTextCentre", "SetTextOutline",
                     "BeginTextCommandDisplayText", "AddTextComponentSubstringPlayerName", "EndTextCommandDisplayText"}) do _G[n] = function() end end
 
@@ -129,12 +127,8 @@ check("a second laptop while one is open is refused", TOBHack.Start() == false)
 TOBHack.active = false
 
 loaded = false
-check("no laptop screen: ox_lib skill check instead", hack({}) == true and SKILLED == TOB.MinigameDifficulty)
-skill = false
-check("... and its failure counts", hack({}) == false)
-oxlib, skill = false, true
-check("no laptop and no ox_lib: the hack isn't blocked", hack({}) == true)
-loaded, oxlib = true, true
+check("no laptop screen: nil, so the caller runs its normal minigame", hack({}) == nil and not TOBHack.active)
+loaded = true
 
 -- Per-bank minigames
 TOB.HackMinigame, TOB.DrillMinigame = "ox_lib", {"easy"}
@@ -143,20 +137,27 @@ TOB.Banks = {B1 = {minigames = {hack = "gta_pc", drill = "gta_drill"}}, F1 = {},
 check("bank with its own setting", MinigameSetting("B1", "hack") == "gta_pc")
 check("bank without: the global setting", MinigameSetting("F1", "hack") == "ox_lib" and MinigameSetting("F1", "drill") == TOB.DrillMinigame)
 check("unknown bank: the global setting", MinigameSetting("nope", "drill") == TOB.DrillMinigame)
-r = RunMinigame("B1", "hack", function() error("fallback shouldn't run") end)
+calls, script, frame = {}, nil, 0
+r = BankHackMinigame("B1", function() error("fallback shouldn't run") end)
 check("B1 hack runs the GTA laptop", r == false and calls[1][1] == "load HACKING_PC") -- no clicks: times out
-check("B1 drill runs the GTA drill", RunMinigame("B1", "drill", function() return false end) == true)
 local got
-check("F1 uses the resource's normal code with the global value", RunMinigame("F1", "hack", function(v) got = v return true end) == true and got == "ox_lib")
-hack({[2] = R.POWER_OFF})
-calls = {}
+check("F1 uses the resource's normal code with the global value", BankHackMinigame("F1", function(v) got = v return true end) == true and got == "ox_lib")
+calls, frame = {}, 0
 script = function(f) if f == 2 then pressed[24] = true; answers[#answers + 1] = R.POWER_OFF end end
-frame = 0
-RunMinigame("F2", "hack", function() end)
+BankHackMinigame("F2", function() end)
 check("options in the bank setting reach the laptop", named("SET_LIVES")[1][2] == 2)
-check("a function gets the bank", RunMinigame("F3", "drill", function() end) == true)
-TOB.Banks.F3.minigames.drill = function() return "yes" end
-check("a function must return true to pass", RunMinigame("F3", "drill", function() end) == false)
+TOB.Banks.F5 = {minigames = {hack = function(bank) return bank == "F5" end}}
+check("a function setting gets the bank", BankHackMinigame("F5", function() error("no fallback") end) == true)
+TOB.Banks.F5.minigames.hack = function() return "yes" end
+check("a function must return true to pass", BankHackMinigame("F5", function() end) == false)
+loaded, got = false, nil
+check("laptop doesn't load: the global setting runs instead", BankHackMinigame("B1", function(v) got = v return true end) == true and got == "ox_lib")
+TOB.HackMinigame = "gta_pc"
+BankHackMinigame("B1", function(v) got = v return true end)
+check("... and if the global is the laptop too: ox_lib", got == "ox_lib")
+TOB.HackMinigame = function(bank) got = bank return true end
+check("... and if the global is a function: it runs with the bank", BankHackMinigame("B1", function() error("no fallback") end) == true and got == "B1")
+TOB.HackMinigame, loaded = "ox_lib", true
 
 -- Deposit box drilling: the GTA drill replaces the progress bar, everything else runs before it
 local progress, checked = 0, nil
