@@ -27,7 +27,8 @@ AddEventHandler("TOB_fh:drillResult", function(bank, box, ok, reason)
     local drill = CreateObject(drillHash, here.x, here.y, here.z, true, true, true)
     AttachEntityToEntity(drill, ped, GetPedBoneIndex(ped, 57005), 0.14, 0, -0.01, 90.0, -90.0, 180.0, true, true, false, true, 1, true)
     local sound = GetSoundId()
-    PlaySoundFromEntity(sound, "Drill", drill, "DLC_HEIST_FLEECA_SOUNDSET", true, 0)
+    -- not networked: the others hear it from the server's bank sound (client/sounds.lua), so not twice
+    PlaySoundFromEntity(sound, "Drill", drill, "DLC_HEIST_FLEECA_SOUNDSET", false, 0)
     DisableInput = true
 
     -- the minigame and the drilling time (client/minigames.lua): the GTA drill screen, or the skill check + progress bar

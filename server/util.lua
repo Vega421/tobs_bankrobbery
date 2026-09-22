@@ -12,11 +12,6 @@ function Money(n)
     return (s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
 end
 
-function Clock(seconds)
-    seconds = math.max(0, math.floor(seconds))
-    return ("%d:%02d"):format(seconds // 60, seconds % 60)
-end
-
 function Duration(seconds)
     seconds = math.max(0, math.floor(seconds))
     return ("%dm %02ds"):format(seconds // 60, seconds % 60)
@@ -112,7 +107,8 @@ function IsNear(src, pos, maxDist)
     return d == nil or d <= maxDist
 end
 
-if GetConvar("onesync", "off") == "off" then
+-- the health check (server/healthcheck.lua) says this too when it runs on start
+if GetConvar("onesync", "off") == "off" and SV.HealthCheck == false then
     print("^1[tobs_bankrobbery] OneSync is off. The anti-cheat can't check where players are, so distance checks are skipped. Set 'set onesync on' in server.cfg.^7")
 end
 

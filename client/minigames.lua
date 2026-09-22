@@ -10,6 +10,7 @@
 -- true/false; or anything the global setting accepts ("ox_lib", "none", a list of ox_lib
 -- difficulties). Banks without one use TOB.HackMinigame / TOB.DrillMinigame.
 -- Without tobs_minigames, or when a GTA screen doesn't load, the resource's own minigame runs instead.
+-- Loaded on the server too (shared script), so the health check uses the same list of games.
 
 local Global = {hack = "HackMinigame", drill = "DrillMinigame"}
 local Games = {hack = true, drill = true, safe = true, thermite = true, keypad = true, wires = true, lockpick = true,
@@ -25,7 +26,7 @@ end
 
 -- The tobs_minigames game a setting names, and its settings: "thermite" or {type = "drill", ...}.
 -- nil for anything else ("ox_lib", "none", a list of difficulties, a function).
-local function Game(v)
+function MinigameGame(v)
     local name, opts = v, nil
     if type(v) == "table" and v.type then name, opts = v.type, v end
     if type(name) ~= "string" then return nil end
@@ -54,25 +55,23 @@ local function DrillOptions(opts)
     return o
 end
 
--- The global setting, when the bank's minigame can't be played: a tobs_minigames game or a function
--- there can't be the fallback, so then the plain skill check is used
+-- The global setting, when the bank's tobs_minigames game can't be played. A tobs_minigames game
+-- there can't be the fallback either, so then the plain skill check is used.
 local function Fallback(kind)
     local v = TOB[Global[kind]]
-    if Game(v) or type(v) == "function" then return kind == "hack" and "ox_lib" or {"easy", "medium"} end
+    if MinigameGame(v) then return kind == "hack" and "ox_lib" or {"easy", "medium"} end
     return v
 end
 
--- The bank's hack minigame; returns true/false. tobs_minigames games and function settings run here;
--- anything else goes to fallback(value), the resource's own minigame code.
+-- The bank's hack minigame; returns true/false. tobs_minigames games run here; anything else
+-- ("ox_lib", "none", difficulties, a function) goes to fallback(value), the resource's own minigame
+-- code, which also catches errors in function settings.
 function BankHackMinigame(bank, fallback)
     local v = MinigameSetting(bank, "hack")
-    if type(v) == "function" then return v(bank) == true end
-    local name, opts = Game(v)
+    local name, opts = MinigameGame(v)
     if name then
         local result = Play(name, opts)
         if result ~= nil then return result == true end
-        local global = TOB.HackMinigame
-        if type(global) == "function" then return global(bank) == true end
         v = Fallback("hack")
     end
     return fallback(v) == true
@@ -80,23 +79,19 @@ end
 
 -- The whole drilling step for a deposit box: call this where the resource runs the drill skill check
 -- and the progress bar. The GTA drill ("drill") is timed itself (never faster than TOB.DrillTime), so
--- it replaces the progress bar. Any other game, a function setting, or check(value) (the resource's
--- own skill check, returning true/false; nil = no check) runs first, then the progress bar.
+-- it replaces the progress bar. Any other game, or check(value) (the resource's own skill check for
+-- difficulties or a function, returning true/false; nil = no check) runs first, then the progress bar.
 function DrillBoxMinigame(bank, check)
     local v = MinigameSetting(bank, "drill")
-    local name, opts = Game(v)
+    local name, opts = MinigameGame(v)
     if name == "drill" then
         local result = Play("drill", DrillOptions(opts))
         if result ~= nil then return result == true end
     end
     local passed
-    if type(v) == "function" then
-        passed = v(bank) == true
-    elseif name then
-        if name ~= "drill" then passed = Play(name, opts) end -- not `x and y or nil`: false must stay false
-        if passed == nil then passed = not check or check(Fallback("drill")) == true end
-    else
-        passed = not check or check(v) == true
+    if name and name ~= "drill" then passed = Play(name, opts) end -- false must stay false
+    if passed == nil then
+        passed = not check or check(name and Fallback("drill") or v) == true
     end
     if passed ~= true then return false end
     return Progress(TOB.DrillTime, L("drilling")) == true and not IsEntityDead(PlayerPedId())

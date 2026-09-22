@@ -287,11 +287,17 @@ check("without tobs_minigames: the normal minigame", not startedMg and lastExpor
 TOB.Banks.F1.minigames = {hack = {"hard"}}
 handlers["TOB_fh:outcome"](true, "F1")
 check("a bank's own ox_lib difficulties", lastExport("skillCheck").data[1] == "hard")
+TOB.Banks.F1.minigames = {hack = function() error("broken") end}
+local okRun = pcall(handlers["TOB_fh:outcome"], true, "F1")
+check("a broken function on a bank doesn't stop the heist", okRun and lastServer("TOB_fh:hackStarted")[2] == "F1" and printed[#printed]:find("Minigame error") ~= nil)
 TOB.Banks.F1.minigames = nil
 -- drilling a deposit box
 RUNNING.tobs_minigames = true; MGRESULT = true
 calls = #exportCalls
+local drillNetworked
+function PlaySoundFromEntity(_, name, _, _, isNetwork) if name == "Drill" then drillNetworked = isNetwork end end
 handlers["TOB_fh:drillResult"]("B1", 1, true)
+check("the driller's drill sound isn't networked (the others get the server's bank sound)", drillNetworked == false)
 local bar = false
 for i = calls + 1, #exportCalls do
     if exportCalls[i].fn == "progressBar" then bar = true end
