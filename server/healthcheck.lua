@@ -97,8 +97,21 @@ function HealthCheck()
     if type(TOB.DrillMinigame) == "table" and #TOB.DrillMinigame > 0 and not Started("ox_lib") then
         note("The drill's ox_lib skill check is skipped because ox_lib isn't running.")
     end
-    if type(TOB.HackGame) == "table" and (TOB.HackGame.timeLimit or 0) > 80 then
-        note("TOB.HackGame.timeLimit is over 80 s; the server gives the card, laptop and hack 90 s together.")
+    -- minigames played with tobs_minigames (client/minigames.lua) need it running
+    local Games = {hack = true, drill = true, safe = true, thermite = true, keypad = true, wires = true, lockpick = true,
+                   fingerprint = true, hotwire = true, lasers = true, keyfiling = true, tracker = true, gta_pc = true, gta_drill = true}
+    local function usesGame(v)
+        if type(v) == "table" and v.type then v = v.type end
+        return type(v) == "string" and Games[v]
+    end
+    local users = {}
+    if usesGame(TOB.HackMinigame) or usesGame(TOB.DrillMinigame) then users[#users + 1] = "the global settings" end
+    for name, b in pairs(TOB.Banks or {}) do
+        if type(b.minigames) == "table" and (usesGame(b.minigames.hack) or usesGame(b.minigames.drill)) then users[#users + 1] = name end
+    end
+    table.sort(users)
+    if #users > 0 and not Started("tobs_minigames") then
+        note(("Minigames for %s need tobs_minigames, which isn't running: the normal minigames are used."):format(table.concat(users, ", ")))
     end
 
     if TOB.Locale ~= nil and Locales ~= nil and Locales[TOB.Locale] == nil then
