@@ -22,3 +22,5 @@ jobs:
         run: lua5.4 tests/drill_test.lua
       - name: Hack minigame tests
         run: lua5.4 tests/hack_test.lua
+      - name: Admin tools tests
+        run: lua5.4 tests/tools_test.lua
