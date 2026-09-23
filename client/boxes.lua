@@ -4,11 +4,11 @@ local drilling = false
 
 function DrillBox(bank, box)
     if drilling or DisableInput then return end
-    TriggerServerEvent("TOB_fh:drillBox", bank, box)
+    TriggerServerEvent("tobsbank:drillBox", bank, box)
 end
 
-RegisterNetEvent("TOB_fh:drillResult")
-AddEventHandler("TOB_fh:drillResult", function(bank, box, ok, reason)
+RegisterNetEvent("tobsbank:drillResult")
+AddEventHandler("tobsbank:drillResult", function(bank, box, ok, reason)
     if not ok then
         Notify("error", L(reason, TOB.DrillItemLabel))
         return
@@ -41,21 +41,21 @@ AddEventHandler("TOB_fh:drillResult", function(bank, box, ok, reason)
     DeleteObject(drill)
     DisableInput = false
     drilling = false
-    TriggerServerEvent("TOB_fh:drillDone", bank, box, passed)
+    TriggerServerEvent("tobsbank:drillDone", bank, box, passed)
 end)
 
-RegisterNetEvent("TOB_fh:boxState")
-AddEventHandler("TOB_fh:boxState", function(bank, box, state)
+RegisterNetEvent("tobsbank:boxState")
+AddEventHandler("tobsbank:boxState", function(bank, box, state)
     BoxState[bank] = BoxState[bank] or {}
     BoxState[bank][box] = state
 end)
 
-RegisterNetEvent("TOB_fh:boxesReset")
-AddEventHandler("TOB_fh:boxesReset", function(bank)
+RegisterNetEvent("tobsbank:boxesReset")
+AddEventHandler("tobsbank:boxesReset", function(bank)
     BoxState[bank] = nil
 end)
 
-RegisterNetEvent("TOB_fh:boxReward")
-AddEventHandler("TOB_fh:boxReward", function(text)
+RegisterNetEvent("tobsbank:boxReward")
+AddEventHandler("tobsbank:boxReward", function(text)
     Notify("success", text, 7000)
 end)

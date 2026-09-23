@@ -187,7 +187,7 @@ local function SetStage(bank, stage, ms)
     h.stageAt = GetGameTimer()
     h.ends = ms and (h.stageAt + ms) or nil
     if ms and (stage == "vaultitem" or stage == "open" or stage == "closing") then
-        TriggerClientEvent("TOB_fh:timer", -1, bank, math.floor(ms / 1000), stage)
+        TriggerClientEvent("tobsbank:timer", -1, bank, math.floor(ms / 1000), stage)
     end
 end
 
@@ -195,7 +195,7 @@ function CloseVault(bank)
     if Heists[bank] ~= nil then Heists[bank].vaultOpen = false end
     Doors[bank][2].locked = true
     VaultMoved[bank] = GetGameTimer()
-    TriggerClientEvent("TOB_fh:toggleVault", -1, bank, true)
+    TriggerClientEvent("tobsbank:toggleVault", -1, bank, true)
 end
 
 -- Ends the heist. cooldown = false (admin reset) lets the bank be robbed again straight away.
@@ -215,11 +215,11 @@ function EndHeist(bank, reason, cooldown)
         end
         if TOB.LootCounter then
             for id, p in pairs(h.payouts) do
-                TriggerClientEvent("TOB_fh:heistTotal", id, Money(p.worth), Money(totalWorth))
+                TriggerClientEvent("tobsbank:heistTotal", id, Money(p.worth), Money(totalWorth))
             end
         end
         if TOB.Alarm and TOB.Banks[bank].alarm then
-            TriggerClientEvent("TOB_fh:alarm", -1, bank, false)
+            TriggerClientEvent("tobsbank:alarm", -1, bank, false)
         end
         Log((test and "[TEST] " or "") .. "Heist ended: " .. BankName(bank),("Reason: %s\nDuration: %s\nTotal: $%s\n%s"):format(
             reason, Duration(os.time() - h.started), Money(totalWorth), #lines > 0 and table.concat(lines, "\n") or "Nobody was paid."), 15105570)
@@ -243,11 +243,11 @@ function EndHeist(bank, reason, cooldown)
     TOB.Banks[bank].onaction = false
     TOB.Banks[bank].special = nil
     Heists[bank] = nil
-    TriggerClientEvent("TOB_fh:bankState", -1, bank, false)
-    TriggerClientEvent("TOB_fh:boxesReset", -1, bank)
+    TriggerClientEvent("tobsbank:bankState", -1, bank, false)
+    TriggerClientEvent("tobsbank:boxesReset", -1, bank)
     if GateLockedByDefault(bank) and not Doors[bank][1].locked then
         Doors[bank][1].locked = true
-        TriggerClientEvent("TOB_fh:toggleDoor", -1, bank, true)
+        TriggerClientEvent("tobsbank:toggleDoor", -1, bank, true)
     end
 end
 
@@ -255,8 +255,8 @@ end
 local function FailHeist(bank, reason)
     local h = Heists[bank]
     if h == nil then return end
-    if h.owner then TriggerClientEvent("TOB_fh:heistFailed", h.owner, bank, reason) end
-    TriggerClientEvent("TOB_fh:cleanup", -1, bank)
+    if h.owner then TriggerClientEvent("tobsbank:heistFailed", h.owner, bank, reason) end
+    TriggerClientEvent("tobsbank:cleanup", -1, bank)
     EndHeist(bank, EndReasons[reason] or reason)
 end
 
@@ -266,14 +266,14 @@ function OpenVault(bank)
     h.vaultOpen = true
     Doors[bank][2].locked = false
     VaultMoved[bank] = GetGameTimer()
-    TriggerClientEvent("TOB_fh:toggleVault", -1, bank, false)
+    TriggerClientEvent("tobsbank:toggleVault", -1, bank, false)
     BankSound(bank, "vault") -- everyone in the bank hears the vault door (client/sounds.lua)
     SetStage(bank, "open", TOB.timer * 1000)
     TOB.Banks[bank].special = h.special
     h.serverTrolleys = ServerTrolleys()
     if h.serverTrolleys then SpawnServerTrolleys(bank) end
-    TriggerClientEvent("TOB_fh:vaultOpened", h.owner, bank, h.special, h.looted, h.serverTrolleys)
-    TriggerClientEvent("TOB_fh:startLoot_c", -1, TOB.Banks[bank], bank)
+    TriggerClientEvent("tobsbank:vaultOpened", h.owner, bank, h.special, h.looted, h.serverTrolleys)
+    TriggerClientEvent("tobsbank:startLoot_c", -1, TOB.Banks[bank], bank)
     TriggerEvent("tobs_bankrobbery:vaultOpened", bank)
 end
 
@@ -283,15 +283,15 @@ function StartClosing(bank, reason)
     if h == nil or h.stage == "closing" or h.stage == "cleanup" then return end
     h.reason = reason
     SetStage(bank, "closing", (TOB.VaultCloseDelay or 30) * 1000)
-    TriggerClientEvent("TOB_fh:closing", -1, bank, TOB.VaultCloseDelay or 30)
+    TriggerClientEvent("tobsbank:closing", -1, bank, TOB.VaultCloseDelay or 30)
 end
 
 local function HackDone(bank)
     local h = Heists[bank]
-    TriggerClientEvent("TOB_fh:hackDone", h.owner, bank)
+    TriggerClientEvent("tobsbank:hackDone", h.owner, bank)
     if VaultItemEnabled() then
         SetStage(bank, "vaultitem", TOB.timer * 1000)
-        TriggerClientEvent("TOB_fh:awaitVaultItem", h.owner, bank)
+        TriggerClientEvent("tobsbank:awaitVaultItem", h.owner, bank)
     else
         OpenVault(bank)
     end
@@ -315,7 +315,7 @@ local function Handover(bank, oldOwner)
     end
     if best == nil then return false end
     h.owner = best
-    TriggerClientEvent("TOB_fh:takeover", best, bank, {
+    TriggerClientEvent("tobsbank:takeover", best, bank, {
         stage = h.stage,
         itemUsed = h.itemUsedAt ~= nil,
         gateOpen = h.gateOpen == true or h.gateAt ~= nil,
@@ -345,12 +345,12 @@ end
 
 -- EVENTS --
 
-RegisterServerEvent("TOB_fh:startcheck")
-AddEventHandler("TOB_fh:startcheck", function(bank)
+RegisterServerEvent("tobsbank:startcheck")
+AddEventHandler("tobsbank:startcheck", function(bank)
     local _source = source
 
     if TOB.Banks[bank] == nil or TooSoon(_source, "start", 2000) then return end
-    local function Refuse(text) TriggerClientEvent("TOB_fh:outcome", _source, false, text) end
+    local function Refuse(text) TriggerClientEvent("tobsbank:outcome", _source, false, text) end
     if Bridge.IsPolice(_source) then return Refuse(RefusalText("police_job")) end
     if not IsNear(_source, TOB.Banks[bank].doors.startloc, 5.0) then
         Flag(_source, "Tried to start the heist at " .. tostring(bank) .. " from far away.")
@@ -399,38 +399,38 @@ AddEventHandler("TOB_fh:startcheck", function(bank)
         -- the inner gate stays locked until the robber hacks it
         if GateLockedByDefault(bank) and not Doors[bank][1].locked then
             Doors[bank][1].locked = true
-            TriggerClientEvent("TOB_fh:toggleDoor", -1, bank, true)
+            TriggerClientEvent("tobsbank:toggleDoor", -1, bank, true)
         end
 
-        TriggerClientEvent("TOB_fh:outcome", _source, true, bank)
-        TriggerClientEvent("TOB_fh:bankState", -1, bank, true)
+        TriggerClientEvent("tobsbank:outcome", _source, true, bank)
+        TriggerClientEvent("tobsbank:bankState", -1, bank, true)
         if TOB.Alarm and TOB.Banks[bank].alarm then
-            TriggerClientEvent("TOB_fh:alarm", -1, bank, true)
+            TriggerClientEvent("tobsbank:alarm", -1, bank, true)
         end
-        TriggerClientEvent("TOB_fh:policenotify", -1, bank)
+        TriggerClientEvent("tobsbank:policenotify", -1, bank)
         Log((test and "[TEST] " or "") .. "Heist started: " .. BankName(bank), PlayerLabel(_source) .. " started a heist.", 16740396)
         HeistStarted(bank, _source)
     end
 end)
 
 -- The robber passed the minigame: the hack runs for TOB.hacktime
-RegisterServerEvent("TOB_fh:hackStarted")
-AddEventHandler("TOB_fh:hackStarted", function(bank)
+RegisterServerEvent("tobsbank:hackStarted")
+AddEventHandler("tobsbank:hackStarted", function(bank)
     local h = Heists[bank]
     if h == nil or h.owner ~= source or h.stage ~= "card" then return end
     SetStage(bank, "hacking", TOB.hacktime)
 end)
 
 -- The robber failed the minigame or was killed during the hack
-RegisterServerEvent("TOB_fh:hackFailed")
-AddEventHandler("TOB_fh:hackFailed", function(bank)
+RegisterServerEvent("tobsbank:hackFailed")
+AddEventHandler("tobsbank:hackFailed", function(bank)
     local h = Heists[bank]
     if h == nil or h.owner ~= source or (h.stage ~= "card" and h.stage ~= "hacking") then return end
     FailHeist(bank, "hack_failed")
 end)
 
-RegisterServerEvent("TOB_fh:useVaultItem")
-AddEventHandler("TOB_fh:useVaultItem", function(bank)
+RegisterServerEvent("tobsbank:useVaultItem")
+AddEventHandler("tobsbank:useVaultItem", function(bank)
     local _source = source
     local h = Heists[bank]
 
@@ -441,16 +441,16 @@ AddEventHandler("TOB_fh:useVaultItem", function(bank)
     end
     if Bridge.HasItem(_source, TOB.VaultItem, 1) and Bridge.RemoveItem(_source, TOB.VaultItem, 1) then
         h.itemUsedAt = GetGameTimer()
-        TriggerClientEvent("TOB_fh:vaultItemResult", _source, bank, true)
+        TriggerClientEvent("tobsbank:vaultItemResult", _source, bank, true)
     else
-        TriggerClientEvent("TOB_fh:vaultItemResult", _source, bank, false)
+        TriggerClientEvent("tobsbank:vaultItemResult", _source, bank, false)
     end
 end)
 
 -- Banks with doors.secondloc (Fleeca) have an inner gate the robber hacks after the vault opens.
 -- The gate opens TOB.GateHackTime after the hack started.
-RegisterServerEvent("TOB_fh:useGate")
-AddEventHandler("TOB_fh:useGate", function(bank)
+RegisterServerEvent("tobsbank:useGate")
+AddEventHandler("tobsbank:useGate", function(bank)
     local _source = source
     local h = Heists[bank]
 
@@ -462,17 +462,17 @@ AddEventHandler("TOB_fh:useGate", function(bank)
     local item = TOB.GateItem
     if item ~= nil and item ~= "" then
         if not (Bridge.HasItem(_source, item, 1) and Bridge.RemoveItem(_source, item, 1)) then
-            TriggerClientEvent("TOB_fh:gateResult", _source, bank, false)
+            TriggerClientEvent("tobsbank:gateResult", _source, bank, false)
             return
         end
     end
     h.gateAt = GetGameTimer()
-    TriggerClientEvent("TOB_fh:gateResult", _source, bank, true)
+    TriggerClientEvent("tobsbank:gateResult", _source, bank, true)
 end)
 
 -- Thermite sparks for everyone near the vault (the robber's game asks, the server checks)
-RegisterServerEvent("TOB_fh:thermiteFx")
-AddEventHandler("TOB_fh:thermiteFx", function(bank, coords)
+RegisterServerEvent("tobsbank:thermiteFx")
+AddEventHandler("tobsbank:thermiteFx", function(bank, coords)
     local h = Heists[bank]
 
     if h == nil or h.owner ~= source or h.itemUsedAt == nil or h.fxSent then return end
@@ -480,7 +480,7 @@ AddEventHandler("TOB_fh:thermiteFx", function(bank, coords)
     local c = vector3(coords.x, coords.y, coords.z)
     if #(c - vector3(Doors[bank][2].loc.x, Doors[bank][2].loc.y, Doors[bank][2].loc.z)) > 4.0 then return end
     h.fxSent = true
-    TriggerClientEvent("TOB_fh:thermiteFx_c", -1, c, TOB.VaultItemTime)
+    TriggerClientEvent("tobsbank:thermiteFx_c", -1, c, TOB.VaultItemTime)
 end)
 
 AddEventHandler("playerDropped", function()
@@ -517,7 +517,7 @@ local function RunningHeists()
     return list
 end
 
-Bridge.RegisterCallback("TOB_fh:getBanks", function(source, cb)
+Bridge.RegisterCallback("tobsbank:getBanks", function(source, cb)
     cb(TOB.Banks, Doors, RunningHeists())
 end)
 
@@ -537,7 +537,7 @@ function HeistTick()
         local stage = h.stage
 
         if os.time() - h.started > MaxHeistSeconds() then
-            TriggerClientEvent("TOB_fh:forceReset", -1, bank)
+            TriggerClientEvent("tobsbank:forceReset", -1, bank)
             CloseVault(bank)
             EndHeist(bank, "it ran too long and was ended automatically")
         elseif stage == "card" then
@@ -563,7 +563,7 @@ function HeistTick()
             end
         elseif stage == "cleanup" then
             if now >= h.ends then
-                TriggerClientEvent("TOB_fh:cleanup", -1, bank)
+                TriggerClientEvent("tobsbank:cleanup", -1, bank)
                 EndHeist(bank, h.reason or "finished")
             end
         end
@@ -574,8 +574,8 @@ function HeistTick()
             if h.gateAt ~= nil and not h.gateOpen and now >= h.gateAt + (TOB.GateHackTime or 0) then
                 h.gateOpen = true
                 Doors[bank][1].locked = false
-                TriggerClientEvent("TOB_fh:toggleDoor", -1, bank, false)
-                if h.owner then TriggerClientEvent("TOB_fh:gateOpened", h.owner, bank) end
+                TriggerClientEvent("tobsbank:toggleDoor", -1, bank, false)
+                if h.owner then TriggerClientEvent("tobsbank:gateOpened", h.owner, bank) end
             end
             -- the leader has to stay at the bank
             if h.owner ~= nil and (h.stage == "hacking" or h.stage == "vaultitem" or h.stage == "open")

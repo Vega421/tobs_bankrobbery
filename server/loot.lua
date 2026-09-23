@@ -49,7 +49,7 @@ local function Pay(src, g)
         g.paidWorth = owedWorth
         local mine = RecordPayout(g.bank, src, worth, 0, 0)
         if TOB.LootCounter then
-            TriggerClientEvent("TOB_fh:grabbed", src, worth, Money(mine))
+            TriggerClientEvent("tobsbank:grabbed", src, worth, Money(mine))
         end
         return
     elseif g.marked then
@@ -57,7 +57,7 @@ local function Pay(src, g)
         if worth <= 0 then return end
         g.paidWorth = owedWorth
         if TOB.LootCounter then
-            TriggerClientEvent("TOB_fh:grabbed", src, worth, Money(g.paidWorth))
+            TriggerClientEvent("tobsbank:grabbed", src, worth, Money(g.paidWorth))
         end
         return
     elseif g.item then
@@ -67,7 +67,7 @@ local function Pay(src, g)
         if not Bridge.AddItem(src, g.item, n) then
             if not g.full then
                 g.full = true
-                TriggerClientEvent("TOB_fh:bagFull", src)
+                TriggerClientEvent("tobsbank:bagFull", src)
             end
             return
         end
@@ -85,7 +85,7 @@ local function Pay(src, g)
     g.paidWorth = owedWorth
     local mine = RecordPayout(g.bank, src, worth, cash, items, g.item)
     if TOB.LootCounter then
-        TriggerClientEvent("TOB_fh:grabbed", src, worth, Money(mine))
+        TriggerClientEvent("tobsbank:grabbed", src, worth, Money(mine))
     end
 end
 
@@ -99,11 +99,11 @@ local function Finish(src, g)
             -- no room for the bag: pay it as dirty money so nothing is lost
             Bridge.AddMoney(src, g.paidWorth, "black")
             RecordPayout(g.bank, src, g.paidWorth, g.paidWorth, 0)
-            TriggerClientEvent("TOB_fh:bagFull", src)
+            TriggerClientEvent("tobsbank:bagFull", src)
         end
     end
     if g.dye then
-        TriggerClientEvent("TOB_fh:dyePack", -1, src, TOB.DyePack.smoke or 10)
+        TriggerClientEvent("tobsbank:dyePack", -1, src, TOB.DyePack.smoke or 10)
         Log("Dye pack", PlayerLabel(src) .. " was hit by a dye pack at " .. BankName(g.bank) .. ".", 15158332)
     end
     if TOB.Tracker and TOB.Tracker.enabled and Roll(TOB.Tracker.chance) then
@@ -125,15 +125,15 @@ function DropStaleGrabs(now)
     end
 end
 
-RegisterServerEvent("TOB_fh:lootup")
-AddEventHandler("TOB_fh:lootup", function(bank, loot)
+RegisterServerEvent("tobsbank:lootup")
+AddEventHandler("tobsbank:lootup", function(bank, loot)
     local _source = source
     local slot = Trolleys[loot]
     local h = Heists[bank]
 
     if h == nil or slot == nil or Bridge.IsPolice(_source) then return end
     local function Deny(reason)
-        TriggerClientEvent("TOB_fh:lootResult", _source, bank, loot, false, reason)
+        TriggerClientEvent("tobsbank:lootResult", _source, bank, loot, false, reason)
     end
     if Looting[_source] ~= nil then return Deny() end
     if h.looted[slot] then return Deny("trolley_taken") end
@@ -173,13 +173,13 @@ AddEventHandler("TOB_fh:lootup", function(bank, loot)
     Looting[_source] = {bank = bank, slot = slot, started = GetGameTimer(), last = 0,
                         worth = worth, paidWorth = 0, item = item, itemTotal = itemTotal, paidItems = 0,
                         marked = marked, dye = dye, dirty = dye and TOB.DyePack.dirty == true}
-    TriggerClientEvent("TOB_fh:lootResult", _source, bank, loot, true)
-    TriggerClientEvent("TOB_fh:lootup_c", -1, bank, loot)
+    TriggerClientEvent("tobsbank:lootResult", _source, bank, loot, true)
+    TriggerClientEvent("tobsbank:lootup_c", -1, bank, loot)
 end)
 
 -- Sent each time a pile lands in the bag (the grab animation's RELEASE_CASH_DESTROY event)
-RegisterServerEvent("TOB_fh:rewardCash")
-AddEventHandler("TOB_fh:rewardCash", function()
+RegisterServerEvent("tobsbank:rewardCash")
+AddEventHandler("tobsbank:rewardCash", function()
     local _source = source
     local g = Looting[_source]
 
@@ -198,8 +198,8 @@ AddEventHandler("TOB_fh:rewardCash", function()
 end)
 
 -- Sent when the player stops grabbing (finished or pressed the stop key): pays the rest and frees the player
-RegisterServerEvent("TOB_fh:grabDone")
-AddEventHandler("TOB_fh:grabDone", function()
+RegisterServerEvent("tobsbank:grabDone")
+AddEventHandler("tobsbank:grabDone", function()
     local _source = source
     local g = Looting[_source]
 

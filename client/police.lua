@@ -21,8 +21,8 @@ local function AddPoliceBlip(bank)
     blips[bank] = blip
 end
 
-RegisterNetEvent("TOB_fh:policenotify")
-AddEventHandler("TOB_fh:policenotify", function(bank)
+RegisterNetEvent("tobsbank:policenotify")
+AddEventHandler("tobsbank:policenotify", function(bank)
     if TOB.BuiltInPoliceAlert and TOB.Banks[bank] ~= nil and IsPoliceJob() then
         Notify("warning", L("police_alert"), 10000)
         AddPoliceBlip(bank)
@@ -30,8 +30,8 @@ AddEventHandler("TOB_fh:policenotify", function(bank)
 end)
 
 -- The server tells everyone when a bank's heist starts or ends
-RegisterNetEvent("TOB_fh:bankState")
-AddEventHandler("TOB_fh:bankState", function(bank, active)
+RegisterNetEvent("tobsbank:bankState")
+AddEventHandler("tobsbank:bankState", function(bank, active)
     if TOB.Banks[bank] == nil then return end
     TOB.Banks[bank].onaction = active
     if not active then RemovePoliceBlip(bank) end

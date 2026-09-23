@@ -12,8 +12,8 @@ local function RemoveTracker(id)
 end
 
 -- The server sends police the tracked robber's position every TOB.Tracker.interval seconds
-RegisterNetEvent("TOB_fh:trackerPos")
-AddEventHandler("TOB_fh:trackerPos", function(id, coords, secondsLeft)
+RegisterNetEvent("tobsbank:trackerPos")
+AddEventHandler("tobsbank:trackerPos", function(id, coords, secondsLeft)
     if not IsPoliceJob() then return RemoveTracker(id) end
     local t = trackerBlips[id]
     if t == nil then
@@ -33,14 +33,14 @@ AddEventHandler("TOB_fh:trackerPos", function(id, coords, secondsLeft)
     t.seen = GetGameTimer()
 end)
 
-RegisterNetEvent("TOB_fh:trackerEnd")
-AddEventHandler("TOB_fh:trackerEnd", function(id)
+RegisterNetEvent("tobsbank:trackerEnd")
+AddEventHandler("tobsbank:trackerEnd", function(id)
     RemoveTracker(id)
 end)
 
 -- The robber finds out they're being tracked (TOB.Tracker.warnRobber)
-RegisterNetEvent("TOB_fh:trackerWarn")
-AddEventHandler("TOB_fh:trackerWarn", function()
+RegisterNetEvent("tobsbank:trackerWarn")
+AddEventHandler("tobsbank:trackerWarn", function()
     Notify("warning", L("tracker_warn"), 10000)
 end)
 
@@ -55,8 +55,8 @@ Citizen.CreateThread(function()
 end)
 
 -- Dye pack: red smoke around the robber for everyone nearby
-RegisterNetEvent("TOB_fh:dyePack")
-AddEventHandler("TOB_fh:dyePack", function(id, seconds)
+RegisterNetEvent("tobsbank:dyePack")
+AddEventHandler("tobsbank:dyePack", function(id, seconds)
     if id == GetPlayerServerId(PlayerId()) then
         Notify("error", L("dye_pack"), 8000)
     end

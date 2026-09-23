@@ -29,15 +29,15 @@ function DropBoxes(src)
         for box, state in pairs(h.boxes) do
             if state.busy == src then
                 h.boxes[box] = nil
-                TriggerClientEvent("TOB_fh:boxState", -1, bank, box, nil)
+                TriggerClientEvent("tobsbank:boxState", -1, bank, box, nil)
                 BankSound(bank, "drill_off", box)
             end
         end
     end
 end
 
-RegisterServerEvent("TOB_fh:drillBox")
-AddEventHandler("TOB_fh:drillBox", function(bank, box)
+RegisterServerEvent("tobsbank:drillBox")
+AddEventHandler("tobsbank:drillBox", function(bank, box)
     local _source = source
 
     if not TOB.DepositBoxes or not VaultOpen(bank) or Bridge.IsPolice(_source) then return end
@@ -51,25 +51,25 @@ AddEventHandler("TOB_fh:drillBox", function(bank, box)
     local state = h.boxes[box]
     if state and state.opened then return end
     if state and state.busy and state.busy ~= _source then
-        TriggerClientEvent("TOB_fh:drillResult", _source, bank, box, false, "box_busy")
+        TriggerClientEvent("tobsbank:drillResult", _source, bank, box, false, "box_busy")
         return
     end
     if IsDrilling(_source) then
-        TriggerClientEvent("TOB_fh:drillResult", _source, bank, box, false, "already_drilling")
+        TriggerClientEvent("tobsbank:drillResult", _source, bank, box, false, "already_drilling")
         return
     end
     if TOB.DrillItem and TOB.DrillItem ~= "" and not Bridge.HasItem(_source, TOB.DrillItem, 1) then
-        TriggerClientEvent("TOB_fh:drillResult", _source, bank, box, false, "no_drill")
+        TriggerClientEvent("tobsbank:drillResult", _source, bank, box, false, "no_drill")
         return
     end
     h.boxes[box] = {busy = _source, started = GetGameTimer()}
-    TriggerClientEvent("TOB_fh:boxState", -1, bank, box, "busy")
-    TriggerClientEvent("TOB_fh:drillResult", _source, bank, box, true)
+    TriggerClientEvent("tobsbank:boxState", -1, bank, box, "busy")
+    TriggerClientEvent("tobsbank:drillResult", _source, bank, box, true)
     BankSound(bank, "drill_on", box, _source) -- everyone near hears the drill (client/sounds.lua)
 end)
 
-RegisterServerEvent("TOB_fh:drillDone")
-AddEventHandler("TOB_fh:drillDone", function(bank, box, success)
+RegisterServerEvent("tobsbank:drillDone")
+AddEventHandler("tobsbank:drillDone", function(bank, box, success)
     local _source = source
     local h = Heists[bank]
     local state = h and h.boxes[box]
@@ -79,7 +79,7 @@ AddEventHandler("TOB_fh:drillDone", function(bank, box, success)
     if not VaultOpen(bank) then return end
     if not success then
         h.boxes[box] = nil
-        TriggerClientEvent("TOB_fh:boxState", -1, bank, box, nil)
+        TriggerClientEvent("tobsbank:boxState", -1, bank, box, nil)
         return
     end
     if GetGameTimer() - state.started < (TOB.DrillTime or 0) - 2000 then
@@ -97,28 +97,28 @@ AddEventHandler("TOB_fh:drillDone", function(bank, box, success)
     -- Full pockets: the box stays closed so the player can make room and drill it again
     if count > 0 and not Bridge.CanCarry(_source, r.name, count) then
         h.boxes[box] = nil
-        TriggerClientEvent("TOB_fh:boxState", -1, bank, box, nil)
-        TriggerClientEvent("TOB_fh:bagFull", _source)
+        TriggerClientEvent("tobsbank:boxState", -1, bank, box, nil)
+        TriggerClientEvent("tobsbank:bagFull", _source)
         return
     end
     h.boxes[box] = {opened = true}
-    TriggerClientEvent("TOB_fh:boxState", -1, bank, box, "opened")
+    TriggerClientEvent("tobsbank:boxState", -1, bank, box, "opened")
 
     if r == nil or r.type == "nothing" then
-        TriggerClientEvent("TOB_fh:boxReward", _source, L("box_empty"))
+        TriggerClientEvent("tobsbank:boxReward", _source, L("box_empty"))
     elseif r.type == "money" then
         local amount = math.random(r.min or 0, r.max or r.min or 0)
         if pay then Bridge.AddMoney(_source, amount, TOB.black and "black" or "cash") end
         RecordPayout(bank, _source, amount, pay and amount or 0, 0)
-        TriggerClientEvent("TOB_fh:boxReward", _source, L("box_money", Money(amount)))
+        TriggerClientEvent("tobsbank:boxReward", _source, L("box_money", Money(amount)))
     elseif count > 0 then
         if not pay then
-            TriggerClientEvent("TOB_fh:boxReward", _source, L("box_item", count, r.label or r.name))
+            TriggerClientEvent("tobsbank:boxReward", _source, L("box_item", count, r.label or r.name))
         elseif Bridge.AddItem(_source, r.name, count) then
             RecordPayout(bank, _source, 0, 0, count, r.name)
-            TriggerClientEvent("TOB_fh:boxReward", _source, L("box_item", count, r.label or r.name))
+            TriggerClientEvent("tobsbank:boxReward", _source, L("box_item", count, r.label or r.name))
         else
-            TriggerClientEvent("TOB_fh:bagFull", _source)
+            TriggerClientEvent("tobsbank:bagFull", _source)
         end
     end
 end)

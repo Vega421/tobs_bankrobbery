@@ -2,10 +2,10 @@
 
 -- Resets one bank: stops its heist, closes the vault, relocks the gate and clears the cooldown
 function ResetBank(bank, reason)
-    TriggerClientEvent("TOB_fh:forceReset", -1, bank)
+    TriggerClientEvent("tobsbank:forceReset", -1, bank)
     CloseVault(bank)
     Doors[bank][1].locked = GateLockedByDefault(bank)
-    TriggerClientEvent("TOB_fh:toggleDoor", -1, bank, Doors[bank][1].locked)
+    TriggerClientEvent("tobsbank:toggleDoor", -1, bank, Doors[bank][1].locked)
     EndHeist(bank, reason or "reset by an admin", false)
 end
 
@@ -24,7 +24,7 @@ RegisterCommand(SV.ResetCommand, function(src, args)
     if src == 0 then
         print("[tobs_bankrobbery] " .. msg)
     else
-        TriggerClientEvent("TOB_fh:outcome", src, false, msg)
+        TriggerClientEvent("tobsbank:outcome", src, false, msg)
     end
     if count > 0 then
         Log("Heist reset", who .. " reset " .. (args[1] or "all banks") .. ".", 3447003)
@@ -70,6 +70,10 @@ Citizen.CreateThread(function()
         local latest = data.tag_name:gsub("^v", "")
         if IsNewer(latest, current) then
             print(("^3[tobs_bankrobbery] Version %s is available (you have %s). Download: %s^7"):format(latest, current, data.html_url))
+        elseif latest ~= current then
+            -- The newest release can have a lower number than an old install: the versions were
+            -- restarted at 1.0.0 when the script was rewritten as one resource for every framework.
+            print(("^3[tobs_bankrobbery] The newest release is %s (you have %s, from before the versions were restarted at 1.0.0). Download: %s^7"):format(latest, current, data.html_url))
         else
             print(("^2[tobs_bankrobbery] Version %s is up to date.^7"):format(current))
         end

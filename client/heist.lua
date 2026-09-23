@@ -100,7 +100,7 @@ local function PlantThermite(bank)
     SetPedComponentVariation(ped, 5, 45, 0, 0)
     DetachEntity(thermite, true, true)
     FreezeEntityPosition(thermite, true)
-    TriggerServerEvent("TOB_fh:thermiteFx", bank, GetEntityCoords(thermite))
+    TriggerServerEvent("tobsbank:thermiteFx", bank, GetEntityCoords(thermite))
     NetworkStopSynchronisedScene(scene)
     TaskPlayAnim(ped, THERMITE_DICT, "cover_eyes_intro", 8.0, 8.0, 1000, 36, 1, false, false, false)
     TaskPlayAnim(ped, THERMITE_DICT, "cover_eyes_loop", 8.0, 8.0, 3000, 49, 1, false, false, false)
@@ -111,8 +111,8 @@ end
 
 -- STARTING THE HEIST --
 
-RegisterNetEvent("TOB_fh:outcome")
-AddEventHandler("TOB_fh:outcome", function(ok, arg)
+RegisterNetEvent("tobsbank:outcome")
+AddEventHandler("tobsbank:outcome", function(ok, arg)
     if ok then
         StartHeist(arg)
     else
@@ -151,14 +151,14 @@ function StartHeist(bank)
     -- the bank's own minigame (tobs_minigames), else the normal one (client/minigames.lua)
     if not BankHackMinigame(bank, function(v) return HackMinigame(bank, v) end) then
         LaptopStop(laptop)
-        TriggerServerEvent("TOB_fh:hackFailed", bank)
+        TriggerServerEvent("tobsbank:hackFailed", bank)
         return
     end
-    TriggerServerEvent("TOB_fh:hackStarted", bank)
+    TriggerServerEvent("tobsbank:hackStarted", bank)
     -- The hack fails if the robber is killed during it. The server opens the vault when the time is up.
     if not Progress(TOB.hacktime, L("hacking")) or IsEntityDead(PlayerPedId()) then
         LaptopStop(laptop)
-        TriggerServerEvent("TOB_fh:hackFailed", bank)
+        TriggerServerEvent("tobsbank:hackFailed", bank)
         return
     end
     LaptopStop(laptop)
@@ -166,14 +166,14 @@ end
 
 -- EVENTS FROM THE SERVER (to the leader) --
 
-RegisterNetEvent("TOB_fh:hackDone")
-AddEventHandler("TOB_fh:hackDone", function(bank)
+RegisterNetEvent("tobsbank:hackDone")
+AddEventHandler("tobsbank:hackDone", function(bank)
     Notify("success", L("hack_done"))
     PlaySoundFrontend(-1, "ATM_WINDOW", "HUD_FRONTEND_DEFAULT_SOUNDSET")
 end)
 
-RegisterNetEvent("TOB_fh:heistFailed")
-AddEventHandler("TOB_fh:heistFailed", function(bank, reason)
+RegisterNetEvent("tobsbank:heistFailed")
+AddEventHandler("tobsbank:heistFailed", function(bank, reason)
     if Locales.en[reason] then Notify("error", L(reason)) end
     Check[bank] = false
     AwaitingVault[bank] = nil
@@ -182,19 +182,19 @@ AddEventHandler("TOB_fh:heistFailed", function(bank, reason)
 end)
 
 -- Extra vault step (TOB.VaultItem): the leader has TOB.timer seconds to use the item on the vault door
-RegisterNetEvent("TOB_fh:awaitVaultItem")
-AddEventHandler("TOB_fh:awaitVaultItem", function(bank)
+RegisterNetEvent("tobsbank:awaitVaultItem")
+AddEventHandler("tobsbank:awaitVaultItem", function(bank)
     AwaitingVault[bank] = true
     Notify("inform", L("use_vault_item", TOB.VaultItemLabel), 10000)
 end)
 
 function UseVaultItem(bank)
     if not AwaitingVault[bank] then return end
-    TriggerServerEvent("TOB_fh:useVaultItem", bank)
+    TriggerServerEvent("tobsbank:useVaultItem", bank)
 end
 
-RegisterNetEvent("TOB_fh:vaultItemResult")
-AddEventHandler("TOB_fh:vaultItemResult", function(bank, ok)
+RegisterNetEvent("tobsbank:vaultItemResult")
+AddEventHandler("tobsbank:vaultItemResult", function(bank, ok)
     if not ok then
         Notify("error", L("no_vault_item", TOB.VaultItemLabel))
         return
@@ -228,8 +228,8 @@ function SpawnTrolleys(bank, special, looted)
 end
 
 -- The vault opened: the leader spawns the trolleys
-RegisterNetEvent("TOB_fh:vaultOpened")
-AddEventHandler("TOB_fh:vaultOpened", function(bank, special, looted, serverTrolleys)
+RegisterNetEvent("tobsbank:vaultOpened")
+AddEventHandler("tobsbank:vaultOpened", function(bank, special, looted, serverTrolleys)
     if not serverTrolleys then SpawnTrolleys(bank, special, looted) end -- with OneSync the server spawns them
     if special ~= nil and next(special) ~= nil then
         Notify("inform", L("special_trolley"), 7000)
@@ -245,11 +245,11 @@ end)
 
 function UseGate(bank)
     if not AwaitingGate[bank] then return end
-    TriggerServerEvent("TOB_fh:useGate", bank)
+    TriggerServerEvent("tobsbank:useGate", bank)
 end
 
-RegisterNetEvent("TOB_fh:gateResult")
-AddEventHandler("TOB_fh:gateResult", function(bank, ok)
+RegisterNetEvent("tobsbank:gateResult")
+AddEventHandler("tobsbank:gateResult", function(bank, ok)
     if not ok then
         Notify("error", L("no_gate_item", TOB.GateItemLabel))
         return
@@ -265,14 +265,14 @@ AddEventHandler("TOB_fh:gateResult", function(bank, ok)
     ClearPedTasks(ped)
 end)
 
-RegisterNetEvent("TOB_fh:gateOpened")
-AddEventHandler("TOB_fh:gateOpened", function(bank)
+RegisterNetEvent("tobsbank:gateOpened")
+AddEventHandler("tobsbank:gateOpened", function(bank)
     Notify("success", L("gate_open"))
 end)
 
 -- TAKING OVER: the leader disconnected and this player leads the heist now
-RegisterNetEvent("TOB_fh:takeover")
-AddEventHandler("TOB_fh:takeover", function(bank, info)
+RegisterNetEvent("tobsbank:takeover")
+AddEventHandler("tobsbank:takeover", function(bank, info)
     Leading = bank
     Check[bank] = true
     Notify("inform", L("you_lead"), 8000)
@@ -291,8 +291,8 @@ end)
 -- END OF THE HEIST --
 
 -- Loot phase over: the vault closes soon
-RegisterNetEvent("TOB_fh:closing")
-AddEventHandler("TOB_fh:closing", function(bank, seconds)
+RegisterNetEvent("tobsbank:closing")
+AddEventHandler("tobsbank:closing", function(bank, seconds)
     LootOpen[bank] = false
     AwaitingGate[bank] = nil
     if #(GetEntityCoords(PlayerPedId()) - StartVec(bank)) < 40.0 then
@@ -312,22 +312,22 @@ local function ClearHeist(bank)
 end
 
 -- The heist is over: remove the props
-RegisterNetEvent("TOB_fh:cleanup")
-AddEventHandler("TOB_fh:cleanup", function(bank)
+RegisterNetEvent("tobsbank:cleanup")
+AddEventHandler("tobsbank:cleanup", function(bank)
     ClearHeist(bank)
     CleanBankProps(bank)
 end)
 
 -- Admin reset (SV.ResetCommand) or safety net: stop everything for this bank and remove the props
-RegisterNetEvent("TOB_fh:forceReset")
-AddEventHandler("TOB_fh:forceReset", function(bank)
+RegisterNetEvent("tobsbank:forceReset")
+AddEventHandler("tobsbank:forceReset", function(bank)
     if Leading == bank then DisableInput = false end
     ClearHeist(bank)
     CleanBankProps(bank)
 end)
 
 -- The countdown shown to players at the bank (security timer, vault item time, vault closing)
-RegisterNetEvent("TOB_fh:timer")
-AddEventHandler("TOB_fh:timer", function(bank, seconds)
+RegisterNetEvent("tobsbank:timer")
+AddEventHandler("tobsbank:timer", function(bank, seconds)
     TimerEnds[bank] = GetGameTimer() + seconds * 1000
 end)

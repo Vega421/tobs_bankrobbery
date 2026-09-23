@@ -3,15 +3,15 @@
 
 local lootPending = false
 
--- Asks the server for a trolley; the grab starts when the server says yes (TOB_fh:lootResult)
+-- Asks the server for a trolley; the grab starts when the server says yes (tobsbank:lootResult)
 function RequestLoot(bank, loot)
     if lootPending or DisableInput then return end
     lootPending = true
-    TriggerServerEvent("TOB_fh:lootup", bank, loot)
+    TriggerServerEvent("tobsbank:lootup", bank, loot)
 end
 
-RegisterNetEvent("TOB_fh:lootResult")
-AddEventHandler("TOB_fh:lootResult", function(bank, loot, ok, reason)
+RegisterNetEvent("tobsbank:lootResult")
+AddEventHandler("tobsbank:lootResult", function(bank, loot, ok, reason)
     lootPending = false
     if not ok then
         if reason then Notify("error", L(reason)) end
@@ -22,31 +22,31 @@ AddEventHandler("TOB_fh:lootResult", function(bank, loot, ok, reason)
     StartGrab(bank, vector3(t.x, t.y, t.z), LootSpecial[bank] and LootSpecial[bank][slot])
 end)
 
-RegisterNetEvent("TOB_fh:lootup_c")
-AddEventHandler("TOB_fh:lootup_c", function(bank, loot)
+RegisterNetEvent("tobsbank:lootup_c")
+AddEventHandler("tobsbank:lootup_c", function(bank, loot)
     if LootCheck[bank] ~= nil then
         LootCheck[bank][loot] = true
     end
 end)
 
-RegisterNetEvent("TOB_fh:grabbed")
-AddEventHandler("TOB_fh:grabbed", function(amount)
+RegisterNetEvent("tobsbank:grabbed")
+AddEventHandler("tobsbank:grabbed", function(amount)
     GrabbedNow = GrabbedNow + amount
 end)
 
-RegisterNetEvent("TOB_fh:bagFull")
-AddEventHandler("TOB_fh:bagFull", function()
+RegisterNetEvent("tobsbank:bagFull")
+AddEventHandler("tobsbank:bagFull", function()
     Notify("error", L("bag_full"))
 end)
 
-RegisterNetEvent("TOB_fh:heistTotal")
-AddEventHandler("TOB_fh:heistTotal", function(mine, crew)
+RegisterNetEvent("tobsbank:heistTotal")
+AddEventHandler("tobsbank:heistTotal", function(mine, crew)
     Notify("success", L("heist_total", mine, crew), 10000)
 end)
 
 -- The vault opened: everyone can loot. The prompts run while the player is near this bank.
-RegisterNetEvent("TOB_fh:startLoot_c")
-AddEventHandler("TOB_fh:startLoot_c", function(data, bank)
+RegisterNetEvent("tobsbank:startLoot_c")
+AddEventHandler("tobsbank:startLoot_c", function(data, bank)
     StartLootPhase(data, bank)
 end)
 
@@ -122,7 +122,7 @@ function StartLootPhase(data, bank)
 end
 
 -- The grab animation. Pays by asking the server each time a pile lands in the bag, and tells the
--- server when the player stops (TOB_fh:grabDone).
+-- server when the player stops (tobsbank:grabDone).
 function StartGrab(bank, trolleyCoords, kind)
     local dict = "anim@heists@ornate_bank@grab_cash"
     local ped = PlayerPedId()
@@ -136,7 +136,7 @@ function StartGrab(bank, trolleyCoords, kind)
 
     -- Trolley missing or already being grabbed
     if trollyobj == 0 or IsEntityPlayingAnim(trollyobj, dict, "cart_cash_dissapear", 3) then
-        TriggerServerEvent("TOB_fh:grabDone")
+        TriggerServerEvent("tobsbank:grabDone")
         return
     end
     DisableInput = true
@@ -170,7 +170,7 @@ function StartGrab(bank, trolleyCoords, kind)
                 end
                 if HasAnimEventFired(ped, GetHashKey("RELEASE_CASH_DESTROY")) and IsEntityVisible(grabobj) then
                     SetEntityVisible(grabobj, false, false)
-                    TriggerServerEvent("TOB_fh:rewardCash")
+                    TriggerServerEvent("tobsbank:rewardCash")
                 end
             end
             DeleteObject(grabobj)
@@ -212,7 +212,7 @@ function StartGrab(bank, trolleyCoords, kind)
         end
     end
     stopGrab = true
-    TriggerServerEvent("TOB_fh:grabDone")
+    TriggerServerEvent("tobsbank:grabDone")
 
     local scene3 = NetworkCreateSynchronisedScene(tpos, trot, 2, false, false, 1065353216, 0, 1.3)
     NetworkAddPedToSynchronisedScene(ped, scene3, dict, "exit", 1.5, -4.0, 1, 16, 1148846080, 0)
