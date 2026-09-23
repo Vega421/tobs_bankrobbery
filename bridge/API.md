@@ -29,7 +29,7 @@ vehicle = {plate = "ABC 123", model = "sultan", owner = "ABC12345",
 | -------- | ------- |
 | `Bridge.GetPlayer(src)` | `person`, or `nil` when the player isn't loaded |
 | `Bridge.GetIdentifier(src)` | the person id, or `nil` |
-| `Bridge.IsLoaded(src)` | `true` once the character is in the world (not in character selection). Cheap enough to ask every second: Qbox's `isLoggedIn` state bag (set only once the player has spawned, so qbx_spawn's spawn menu doesn't count), and on QBCore / ESX a list kept from their load and logout events |
+| `Bridge.IsLoaded(src)` | `true` once the character is in the world (not in character selection). Cheap enough to ask every second: Qbox's `isLoggedIn` state bag (set only once the player has spawned, so qbx_spawn's spawn menu doesn't count), and on QBCore / ESX a list kept from their load and logout events (QBCore: the `QBCore:Server:OnPlayerLoaded` a player's game sends once it has spawned, not the character pick, so qb-spawn's menu doesn't count). A game that never sends it stays "not loaded": a script that relies on that should add a time limit, as tobs_anticheat does |
 | `Bridge.IsDead(src)` | `true` while dead or in last stand: the `isDead` state bag (qbx_medical, esx_ambulancejob), else the `isdead` / `inlaststand` metadata (Qbox, QBCore) |
 | `Bridge.GetJob(src)` | the `job` table, or `nil` |
 | `Bridge.IsPolice(src)` | `true` / `false` (uses `BridgeConfig.PoliceJobs` + `PoliceOnDuty`) |

@@ -34,10 +34,18 @@ function Bridge.GetIdentifier(src)
     return p and p.PlayerData.citizenid or nil
 end
 
--- The character is in the world, kept from qb-core's events (no call to qb-core per question)
+-- The character is in the world, kept from qb-core's events (no call to qb-core per question).
+-- qb-core fires QBCore:Server:PlayerLoaded when a character is picked, before qb-spawn's menu; the
+-- player's game sends QBCore:Server:OnPlayerLoaded once it has spawned (qb-spawn, qb-multicharacter,
+-- qb-apartments). Only the second one counts. A game that never sends it is the anticheat's problem:
+-- it counts a player with a character as loaded after a while anyway.
 local Loaded = BridgeLoadedList(function(src) return Bridge.GetIdentifier(src) ~= nil end)
 AddEventHandler("QBCore:Server:PlayerLoaded", function(player)
-    Loaded.Set(player and player.PlayerData and player.PlayerData.source, true)
+    Loaded.Hold(player and player.PlayerData and player.PlayerData.source)
+end)
+RegisterNetEvent("QBCore:Server:OnPlayerLoaded")
+AddEventHandler("QBCore:Server:OnPlayerLoaded", function()
+    if Bridge.GetIdentifier(source) ~= nil then Loaded.Set(source, true) end   -- only with a character
 end)
 AddEventHandler("QBCore:Server:OnPlayerUnload", function(src) Loaded.Set(src, false) end)
 AddEventHandler("playerDropped", function() Loaded.Forget(source) end)
