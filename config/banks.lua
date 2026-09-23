@@ -22,9 +22,12 @@ TOB.Banks = {
         alarm = "PALETO_BAY_SCORE_ALARM",
         minigames = {hack = "hack", drill = "drill"}, -- GTA's hacking laptop and drill (with tobs_minigames)
         doors = {
-            startloc = {x = -105.44020080566, y = 6472.8505859375, z = 31.62672996521, h = 10.240501403809, animcoords = {x = -105.46078491211, y = 6471.5737304688, z = 30.626703262329, h = 43.363094329834}}
+            startloc = {x = -105.44020080566, y = 6472.8505859375, z = 31.62672996521, h = 10.240501403809, animcoords = {x = -105.46078491211, y = 6471.5737304688, z = 30.626703262329, h = 43.363094329834}},
+            -- the inner gate, hacked after the vault opens (standing in front of it, facing it)
+            secondloc = {x = -105.5, y = 6475.08, z = 31.63, h = 39.3, animcoords = {x = -105.5, y = 6475.08, z = 30.63, h = 39.3}}
         },
-        gate = {loc = vector3(-105.15334320068, 6472.7075195312, 31.626728057861), h = 42.639282226562, txtloc = vector3(-105.34651184082, 6472.708984375, 31.626726150513)},
+        gateModel = "v_ilev_cbankvaulgate02", -- the barred gate inside the vault (qb-doorlock)
+        gate = {loc = vector3(-106.26, 6476.01, 31.98), h = 42.639282226562, txtloc = vector3(-105.5, 6475.08, 31.99)},
         vault = {loc = vector3(-105.84294891357, 6475.4428710938, 31.62670135498), txtloc = vector3(-105.84294891357, 6475.4428710938, 31.62670135498)},
         prop = {
             first = {coords = vector3(-105.875, 6472.126, 31.87645), rot = vector3(-103.4942855835, 6471.9970703125, 31.626707077026)}
@@ -51,7 +54,7 @@ TOB.Banks = {
             startloc = {x = 310.93, y = -284.44, z = 54.16, h = -90, animcoords = {x = 311.05, y = -284, z = 53.16, h = 248.6}},
             secondloc = {x = 312.93, y = -284.45, z = 54.16, h = 160.91, animcoords = {x = 313.41, y = -284.42, z = 53.16, h = 160.91}}
         },
-        gate = {loc = vector3(312.93, -284.45, 54.16), h = 160.91, txtloc = vector3(312.93, -284.45, 54.16)},
+        gate = {loc = vector3(314.61, -285.82, 54.49), h = 160.91, txtloc = vector3(313.3, -285.45, 54.49)},
         vault = {loc = vector3(310.93, -284.44, 54.16), txtloc = vector3(310.93, -284.44, 54.16)},
         prop = {
             first = {coords = vector3(311.5481, -284.5114, 54.285), rot = vector3(90, 180, 21)}
@@ -74,7 +77,7 @@ TOB.Banks = {
             startloc = {x = 146.61, y = -1046.02, z = 29.37, h = 244.2, animcoords = {x = 146.75, y = -1045.6, z = 28.37, h = 244.2}},
             secondloc = {x = 148.76, y = -1045.89, z = 29.37, h = 158.54, animcoords = {x = 149.1, y = -1046.08, z = 28.37, h = 158.54}}
         },
-        gate = {loc = vector3(148.76, -1045.89, 29.37), h = 158.54, txtloc = vector3(148.76, -1045.89, 29.37)},
+        gate = {loc = vector3(148.96, -1047.12, 29.7), h = 158.54, txtloc = vector3(148.96, -1047.12, 29.7)},
         vault = {loc = vector3(146.61, -1046.02, 29.37), txtloc = vector3(146.61, -1046.02, 29.37)},
         prop = {
             first = {coords = vector3(147.22, -1046.148, 29.487), rot = vector3(90, 180, 20)}
@@ -97,7 +100,7 @@ TOB.Banks = {
             startloc = {x = -1211.07, y = -336.68, z = 37.78, h = 296.76, animcoords = {x = -1211.25, y = -336.37, z = 36.78, h = 296.76}},
             secondloc = {x = -1209.66, y = -335.15, z = 37.78, h = 213.67, animcoords = {x = -1209.4, y = -335.05, z = 36.78, h = 213.67}}
         },
-        gate = {loc = vector3(-1209.66, -335.15, 37.78), h = 213.67, txtloc = vector3(-1209.66, -335.15, 37.78)},
+        gate = {loc = vector3(-1208.12, -335.586, 37.759), h = 213.67, txtloc = vector3(-1208.12, -335.586, 37.759)},
         vault = {loc = vector3(-1211.07, -336.68, 37.78), txtloc = vector3(-1211.07, -336.68, 37.78)},
         prop = {
             first = {coords = vector3(-1210.5, -336.37, 37.901), rot = vector3(-90, 0, 25)}
@@ -120,7 +123,7 @@ TOB.Banks = {
             startloc = {x = -2956.68, y = 481.34, z = 15.7, h = 353.97, animcoords = {x = -2956.68, y = 481.34, z = 14.7, h = 353.97}},
             secondloc = {x = -2957.26, y = 483.53, z = 15.7, h = 267.73, animcoords = {x = -2957.26, y = 483.53, z = 14.7, h = 267.73}}
         },
-        gate = {loc = vector3(-2957.26, 483.53, 15.7), h = 267.73, txtloc = vector3(-2957.26, 483.53, 15.7)},
+        gate = {loc = vector3(-2956.18, 483.96, 16.02), h = 267.73, txtloc = vector3(-2956.18, 483.96, 16.02)},
         vault = {loc = vector3(-2956.68, 481.34, 15.7), txtloc = vector3(-2956.68, 481.34, 15.7)},
         prop = {
             first = {coords = vector3(-2956.59, 482.05, 15.815), rot = vector3(90, 180, -88)}
@@ -143,7 +146,7 @@ TOB.Banks = {
             startloc = {x = -354.15, y = -55.11, z = 49.04, h = 251.05, animcoords = {x = -354.15, y = -55.11, z = 48.04, h = 251.05}},
             secondloc = {x = -351.97, y = -55.18, z = 49.04, h = 159.79, animcoords = {x = -351.97, y = -55.18, z = 48.04, h = 159.79}}
         },
-        gate = {loc = vector3(-351.97, -55.18, 49.04), h = 159.79, txtloc = vector3(-351.97, -55.18, 49.04)},
+        gate = {loc = vector3(-351.7, -56.28, 49.38), h = 159.79, txtloc = vector3(-351.7, -56.28, 49.38)},
         vault = {loc = vector3(-354.15, -55.11, 49.04), txtloc = vector3(-354.15, -55.11, 49.04)},
         prop = {
             first = {coords = vector3(-353.5, -55.37, 49.157), rot = vector3(90, 180, 20)}

@@ -48,12 +48,13 @@ payout tests further down.
 - [ ] Grabbing pays over time, and the loot counter matches what you were paid
 - [ ] `TOB.StopGrabKey` stops a grab early, and you keep what you had earned
 - [ ] The vault closes after `TOB.timer`, then the trolleys disappear
+- [ ] **The inner gate** (`v_ilev_cbankvaulgate02`, inside the vault) is locked before the heist and opens only after hacking it at the gate. **?** Which trolley is behind it: the config says `trolley3` (`gateTrolley`); if a different one is, note which
 - [ ] `/tobreset B1` ends a stuck heist
 
 ### Fleeca (`F1`-`F6`)
 
 - [ ] The heist starts the same way, with a **silent** alarm (police get the alert, no siren)
-- [ ] The **inner gate** is hacked from the second panel and actually opens
+- [ ] The **inner gate is locked** before the heist (at every Fleeca bank), is hacked from the second panel and actually opens
 - [ ] The vault door turns the right way (check the Great Ocean Highway one, `F6`, especially)
 - [ ] Per-bank `cash` from `config/banks.lua` is what a trolley pays
 
