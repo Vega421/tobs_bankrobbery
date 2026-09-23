@@ -22,7 +22,21 @@ function TriggerClientEvent(name, src, ...) F.events[#F.events + 1] = {name = na
 function TriggerEvent(name, ...) F.triggered[#F.triggered + 1] = {name = name, ...} end
 function RegisterServerEvent() end
 function RegisterNetEvent() end
-function AddEventHandler() end
+F.handlers = {}   -- [event] = {fn, ...}
+function AddEventHandler(name, fn)
+    F.handlers[name] = F.handlers[name] or {}
+    table.insert(F.handlers[name], fn)
+end
+-- Fires a server event as `src` (the handlers read the global `source`)
+function F.Fire(name, src, ...)
+    for _, fn in ipairs(F.handlers[name] or {}) do
+        source = src
+        fn(...)
+    end
+end
+-- FiveM's Player(src).state: F.bags[src] = {isLoggedIn = true, ...}
+F.bags = {}
+function Player(src) return {state = F.bags[src] or {}} end
 function LoadResourceFile() return "return function() end" end
 
 -- Natives the ox_lib fallbacks use
@@ -105,7 +119,7 @@ function Load(framework, side, config)
     F.server = side ~= "client"
     F.queries, F.events, F.threads, F.feed, F.clock = {}, {}, 0, {}, 0
     F.triggered, F.help, F.played, F.cleared, F.dead = {}, nil, nil, false, false
-    F.waits = 0
+    F.waits, F.handlers, F.bags = 0, {}, {}
     Bridge, Framework, Db, BridgeCallbacks, BridgeConfig = nil, nil, nil, nil, config or {}
     F.state["oxmysql"] = "started"
     dofile("bridge/framework.lua")

@@ -74,6 +74,42 @@ function BlackMoneyItem()
     return "black_money"
 end
 
+-- Players (server side) ----------------------------------------------------
+
+-- A player's state bag, or nil. Read through _G because each bridge file has its own local `Player`.
+function BridgeState(src)
+    local fivemPlayer = rawget(_G, "Player")
+    if fivemPlayer == nil or tonumber(src) == nil then return nil end
+    local p = fivemPlayer(tonumber(src))
+    return p and p.state or nil
+end
+
+-- "Is the character loaded?" kept from the framework's own events, so asking every second costs
+-- nothing (a call into the framework copies the whole player). A player who loaded before this
+-- resource started is asked with ask(src); a "no" stands for 5 seconds before it is asked again.
+function BridgeLoadedList(ask)
+    local list = {}   -- [src] = true, or the GetGameTimer() until which "not loaded" stands
+    local L = {}
+    function L.Set(src, loaded)
+        src = tonumber(src)
+        if src then list[src] = loaded and true or GetGameTimer() + 5000 end
+    end
+    function L.Forget(src)
+        if tonumber(src) then list[tonumber(src)] = nil end
+    end
+    function L.IsLoaded(src)
+        src = tonumber(src)
+        if src == nil then return false end
+        local v = list[src]
+        if v == true then return true end
+        if v and GetGameTimer() < v then return false end
+        local loaded = ask(src) == true
+        L.Set(src, loaded)
+        return loaded
+    end
+    return L
+end
+
 -- The optional resources a bridge uses, detected once
 Bridge.Has = setmetatable({}, {__index = function(t, resource)
     local running = IsRunning(resource)

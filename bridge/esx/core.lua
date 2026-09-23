@@ -40,6 +40,22 @@ function Bridge.GetIdentifier(src)
     return p and p.identifier or nil
 end
 
+-- The character is in the world, kept from ESX's events (no call to ESX per question)
+local Loaded = BridgeLoadedList(function(src) return Bridge.GetIdentifier(src) ~= nil end)
+AddEventHandler("esx:playerLoaded", function(src) Loaded.Set(src, true) end)
+AddEventHandler("esx:playerLogout", function(src) Loaded.Set(src, false) end)
+AddEventHandler("playerDropped", function() Loaded.Forget(source) end)
+
+function Bridge.IsLoaded(src)
+    return Loaded.IsLoaded(src)
+end
+
+-- Dead: esx_ambulancejob sets the isDead state bag (ESX has no death metadata)
+function Bridge.IsDead(src)
+    local state = BridgeState(src)
+    return state ~= nil and state.isDead == true
+end
+
 function Bridge.GetJob(src)
     local p = Player(src)
     if p == nil then return nil end
@@ -83,6 +99,14 @@ function Bridge.GetItemCount(src, item)
     local p = Player(src)
     local found = p and p.getInventoryItem(item)
     return found and found.count or 0
+end
+
+-- Weapons: items with ox_inventory, else the ESX loadout (both in capitals: WEAPON_PISTOL)
+function Bridge.HasWeapon(src, weapon)
+    weapon = tostring(weapon):upper()
+    if Bridge.Inventory == "ox" then return Bridge.GetItemCount(src, weapon) > 0 end
+    local p = Player(src)
+    return p ~= nil and p.hasWeapon(weapon) == true
 end
 
 function Bridge.HasItem(src, item, count)
