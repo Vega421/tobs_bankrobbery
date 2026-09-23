@@ -35,7 +35,9 @@ function LaptopStart(bank)
     end
     local ped = PlayerPedId()
     local spot = TOB.Banks[bank].doors.startloc.animcoords
-    local origin = vector3(spot.x, spot.y, spot.z)
+    -- animcoords are floor level; the scene wants standing height (at floor level the player ended up
+    -- under the floor in game)
+    local origin = vector3(spot.x, spot.y, spot.z + (tonumber(TOB.LaptopSceneOffset) or 1.0))
     local rot = vector3(0.0, 0.0, spot.h)
     local here = GetEntityCoords(ped)
     local props = {
@@ -55,7 +57,7 @@ function LaptopStart(bank)
     NetworkStartSynchronisedScene(Scene("hack_enter", false))
     Citizen.Wait(6300)
     NetworkStartSynchronisedScene(Scene("hack_loop", true))
-    return {props = props, exit = function() return Scene("hack_exit", false) end}
+    return {props = props, standing = here, exit = function() return Scene("hack_exit", false) end}
 end
 
 function LaptopStop(ctx)
@@ -65,7 +67,21 @@ function LaptopStop(ctx)
     Citizen.Wait(4600)
     NetworkStopSynchronisedScene(scene)
     for _, obj in pairs(ctx.props) do DeleteObject(obj) end
-    SetPedComponentVariation(PlayerPedId(), 5, 45, 0, 0)
+    local ped = PlayerPedId()
+    SetPedComponentVariation(ped, 5, 45, 0, 0)
+    ClearPedTasks(ped)
+    -- never leave the player lower than where they stood before the scene (under the floor)
+    local now = GetEntityCoords(ped)
+    if ctx.standing and now.z < ctx.standing.z - 0.5 then
+        SetEntityCoords(ped, ctx.standing.x, ctx.standing.y, ctx.standing.z, false, false, false, false)
+    end
+end
+
+-- Puts the player on a spot from the bank config: animcoords are floor level, a ped is placed by its
+-- middle, so it goes 1 m higher (at floor level it would sink into the floor)
+local function StandAt(ped, spot)
+    SetEntityCoords(ped, spot.x, spot.y, spot.z + 1.0, false, false, false, false)
+    SetEntityHeading(ped, spot.h)
 end
 
 -- THERMITE (TOB.VaultItemAnim = "thermite"): plant a charge on the vault door and let it burn
@@ -131,8 +147,7 @@ function StartHeist(bank)
     LoadModel(cardHash)
     local ped = PlayerPedId()
 
-    SetEntityCoords(ped, data.doors.startloc.animcoords.x, data.doors.startloc.animcoords.y, data.doors.startloc.animcoords.z)
-    SetEntityHeading(ped, data.doors.startloc.animcoords.h)
+    StandAt(ped, data.doors.startloc.animcoords)
     local card = CreateObject(cardHash, GetEntityCoords(ped), 1, 1, 0)
     AttachEntityToEntity(card, ped, GetPedBoneIndex(ped, 28422), 0.20, 0.038, 0.001, 10.0, 175.0, 0.0, true, true, false, true, 1, true)
     TaskStartScenarioInPlace(ped, "PROP_HUMAN_ATM", 0, true)
@@ -258,8 +273,7 @@ AddEventHandler("tobsbank:gateResult", function(bank, ok)
     local ped = PlayerPedId()
     local second = TOB.Banks[bank].doors.secondloc
 
-    SetEntityCoords(ped, second.animcoords.x, second.animcoords.y, second.animcoords.z)
-    SetEntityHeading(ped, second.animcoords.h)
+    StandAt(ped, second.animcoords)
     TaskStartScenarioInPlace(ped, "PROP_HUMAN_ATM", 0, true)
     Progress(TOB.GateHackTime, L("hacking_gate"))
     ClearPedTasks(ped)
@@ -291,6 +305,13 @@ end)
 -- END OF THE HEIST --
 
 -- Loot phase over: the vault closes soon
+-- The leader walked away while the vault was open: the vault closes (they're too far for "closing")
+RegisterNetEvent("tobsbank:leaderLeft")
+AddEventHandler("tobsbank:leaderLeft", function(bank)
+    Notify("error", L("robber_left_open"))
+    if Leading == bank then Leading = nil end
+end)
+
 RegisterNetEvent("tobsbank:closing")
 AddEventHandler("tobsbank:closing", function(bank, seconds)
     LootOpen[bank] = false
