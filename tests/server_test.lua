@@ -65,9 +65,10 @@ function Bridge.AddItem(src, item, n, metadata)
     return true
 end
 DIRTY = {}; METADATA = {}
-function Bridge.AddMoney(src, amount, dirty)
+-- account: "cash" (the default) or "black" (dirty money)
+function Bridge.AddMoney(src, amount, account)
     MONEY[src] = (MONEY[src] or 0) + amount
-    if dirty then DIRTY[src] = (DIRTY[src] or 0) + amount end
+    if account == "black" then DIRTY[src] = (DIRTY[src] or 0) + amount end
 end
 local callbacks = {}
 function Bridge.RegisterCallback(name, fn) callbacks[name] = fn end

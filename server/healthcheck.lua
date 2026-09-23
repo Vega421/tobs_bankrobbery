@@ -9,7 +9,7 @@ end
 
 local function Started(res) return GetResourceState(res) == "started" end
 
--- Does the item exist in the inventory? true / false, or nil when it can't be checked (vRP, errors)
+-- Does the item exist in the inventory? true / false, or nil when it can't be checked (errors)
 function ItemExists(name)
     local ok, result = pcall(function()
         if Started("ox_inventory") then
@@ -66,7 +66,7 @@ function HealthCheck()
     local function note(text) notes[#notes + 1] = text end
 
     if Framework == nil then
-        problem("No framework found. Start qbx_core, es_extended, qb-core or vrp before this resource, or set TOB.Framework.")
+        problem("No framework found. Start qbx_core, es_extended or qb-core before this resource, or set TOB.Framework.")
     end
     if GetConvar("onesync", "off") == "off" then
         problem("OneSync is off: the server can't check where players are. Add 'set onesync on' to server.cfg.")

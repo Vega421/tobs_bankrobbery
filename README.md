@@ -2,7 +2,7 @@
 
 # tobs_bankrobbery
 
-**Paleto and Fleeca bank heists for FiveM: Qbox, ESX, QBCore and vRP in one resource**
+**Paleto and Fleeca bank heists for FiveM: Qbox, ESX and QBCore in one resource**
 
 [![Release](https://img.shields.io/github/v/release/Vega421/tobs_bankrobbery?style=flat-square&color=ff6b2c&label=release)](https://github.com/Vega421/tobs_bankrobbery/releases/latest)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Vega421/tobs_bankrobbery/tests.yml?style=flat-square&label=tests)](https://github.com/Vega421/tobs_bankrobbery/actions/workflows/tests.yml)
@@ -19,7 +19,7 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 
 ## Features
 
-- Works on **Qbox, ESX, QBCore and vRP**: the framework is detected automatically
+- Works on **Qbox, ESX and QBCore**: the framework is detected automatically
 - Paleto Bay plus all 6 Fleeca banks
 - Laptop hack, thermite, bank alarm and drillable deposit boxes
 - Cash, gold and diamond trolleys, with a live loot counter
@@ -38,14 +38,14 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 ## Install
 
 1. Download the zip from [Releases](https://github.com/Vega421/tobs_bankrobbery/releases/latest) and unzip it into `resources/`.
-2. Add the items for your inventory from the `install/` folder (`esx.sql`, `ox_inventory.lua`, `qb-core.lua` or `vrp.lua`).
-3. Set your police job (`TOB.PoliceJob`, or `TOB.PoliceGroup` on vRP) in `config/config.lua`.
+2. Add the items for your inventory from the `install/` folder (`esx.sql`, `ox_inventory.lua` or `qb-core.lua`).
+3. Set your police job (`TOB.PoliceJob`) in `config/config.lua`.
 4. Add `ensure tobs_bankrobbery` to `server.cfg` below your framework (and below tobs_minigames, if you use it).
 5. Give admins the commands in `server.cfg`: `add_ace group.admin command.tobreset allow`, and the same for `tobpause`, `tobtest` and `tobcheck`.
 
 See the [installation guide](https://vega421.github.io/scripts/tobs-bankrobbery/installation/) for details.
 
-**Requires:** one of qbx_core, es_extended, qb-core or vrp · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) (optional) · [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional)
+**Requires:** one of qbx_core, es_extended or qb-core · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) (optional) · [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional)
 
 ## Development
 

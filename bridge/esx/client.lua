@@ -1,42 +1,51 @@
--- ESX bridge (client)
+-- ESX Legacy: the client side (job cache, notifications, callbacks)
 if Framework ~= "esx" then return end
+if IsDuplicityVersion() then return end
 
-ESX = nil
--- ESX Legacy uses the export; older ESX versions use the event
-local ok, esxObj = pcall(function() return exports["es_extended"]:getSharedObject() end)
-if ok and esxObj then
-    ESX = esxObj
-else
-    TriggerEvent("esx:getSharedObject", function(obj) ESX = obj end)
+local ESX
+do
+    local ok, shared = pcall(function() return exports["es_extended"]:getSharedObject() end)
+    ESX = ok and shared or nil
+    if ESX == nil then TriggerEvent("esx:getSharedObject", function(obj) ESX = obj end) end
 end
 
-Bridge = {NotifyFallback = "framework", TriggerCallback = TOBCallbacks.Trigger}
-local PlayerData = nil
+Bridge.TriggerCallback = BridgeCallbacks.Trigger
+Bridge.NotifyFallback = "framework"
 
-RegisterNetEvent("esx:setJob")
-AddEventHandler("esx:setJob", function(job)
-    if PlayerData ~= nil then PlayerData.job = job end
+local job, identifier = nil, nil
+
+RegisterNetEvent("esx:setJob", function(newJob) job = newJob end)
+RegisterNetEvent("esx:playerLoaded", function(data)
+    job = data and data.job
+    identifier = data and data.identifier
 end)
 
-RegisterNetEvent("esx:playerLoaded")
-AddEventHandler("esx:playerLoaded", function(xPlayer)
-    PlayerData = xPlayer
-end)
-
--- Waits until ESX and the player's job are loaded, then runs cb
 function Bridge.Init(cb)
     Citizen.CreateThread(function()
-        while ESX == nil do Citizen.Wait(100) end
-        while ESX.GetPlayerData().job == nil do Citizen.Wait(100) end
-        PlayerData = ESX.GetPlayerData()
-        cb()
+        while ESX == nil do Citizen.Wait(200) end
+        while ESX.GetPlayerData() == nil or ESX.GetPlayerData().job == nil do Citizen.Wait(500) end
+        local data = ESX.GetPlayerData()
+        job, identifier = data.job, data.identifier
+        if cb then cb() end
     end)
 end
 
-function Bridge.IsPolice()
-    return PlayerData ~= nil and PlayerData.job ~= nil and IsPoliceJobName(PlayerData.job.name)
+function Bridge.GetJob()
+    if job == nil then return nil end
+    return {name = job.name, label = job.label, grade = job.grade or 0,
+            gradeLabel = job.grade_label, onduty = true}
 end
 
-function Bridge.Notify(msg)
-    ESX.ShowNotification(msg)
+function Bridge.IsPolice()
+    local j = Bridge.GetJob()
+    return j ~= nil and IsPoliceJobName(j.name)
+end
+
+function Bridge.GetIdentifier()
+    return identifier
+end
+
+-- The framework's own notification. bridge/shared/ui.lua wraps this as Bridge.Notify.
+function Bridge.FrameworkNotify(msg, kind)
+    if ESX and ESX.ShowNotification then ESX.ShowNotification(msg) end
 end

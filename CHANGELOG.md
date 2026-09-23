@@ -8,6 +8,10 @@ Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
 A security and reliability update: the server now runs the whole heist, and trolleys pay by the time spent grabbing. Plus minigames per bank and admin tools.
 
+**Frameworks**
+- **vRP support is removed.** The resource is now Qbox, QBCore and ESX only. vRP servers should stay on 2.0.0
+- The framework bridge is now the shared [tobs_bridge](https://github.com/Vega421/tobs_bridge): the same `Bridge` code as the other tobs_ scripts, with the database queries and ox_lib helpers included. Settings are unchanged (`TOB.Framework`, `TOB.PoliceJob`, `TOB.PoliceOnDuty`); `TOB.PoliceGroup` and `install/vrp.lua` are gone
+
 **Minigames**
 - **Minigames per bank** with [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional): set `minigames = {hack = ..., drill = ...}` on a bank in `config/banks.lua`. Any of its games works, with a difficulty: `{type = "thermite", difficulty = "hard"}`
 - **Paleto plays GTA's hacking laptop and GTA's drill** when tobs_minigames is running. The drill screen replaces the progress bar and never finishes faster than `TOB.DrillTime`

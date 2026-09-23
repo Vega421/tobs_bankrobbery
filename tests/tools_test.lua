@@ -170,9 +170,9 @@ problems, notes = HealthCheck()
 check("ESX before its items load: noted, not a problem", #problems == 0 and has(notes, "Couldn't check these items"))
 esxItems = {id_card_f = {}, drill = {}}
 check("ESX with items loaded", #HealthCheck() == 0)
-Framework = "vrp"
+Framework = nil
 problems, notes = HealthCheck()
-check("vRP: items can't be checked, so noted", #problems == 0 and has(notes, "id_card_f, drill"))
+check("no framework: items can't be checked, so noted", has(notes, "id_card_f, drill"))
 Framework, brokenExports = "esx", true
 problems, notes = HealthCheck()
 check("an erroring export doesn't break the check", #problems == 0 and has(notes, "Couldn't check"))

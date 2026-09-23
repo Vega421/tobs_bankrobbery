@@ -25,7 +25,7 @@ print(f"""## What's new
 3. Add the items for your inventory from the `install/` folder.
 4. Add `ensure tobs_bankrobbery` to `server.cfg` below your framework.
 
-**Works with:** Qbox · ESX · QBCore · vRP (detected automatically) · [ox_lib](https://github.com/overextended/ox_lib) (recommended) · [ox_target](https://github.com/overextended/ox_target) (optional)
+**Works with:** Qbox · ESX · QBCore (detected automatically) · [ox_lib](https://github.com/overextended/ox_lib) (recommended) · [ox_target](https://github.com/overextended/ox_target) (optional)
 
 ---
 

@@ -79,7 +79,7 @@ local function Pay(src, g)
     else
         worth = owedWorth - g.paidWorth
         if worth <= 0 then return end
-        Bridge.AddMoney(src, worth, TOB.black or g.dirty)
+        Bridge.AddMoney(src, worth, (TOB.black or g.dirty) and "black" or "cash")
         cash = worth
     end
     g.paidWorth = owedWorth
@@ -97,7 +97,7 @@ local function Finish(src, g)
             RecordPayout(g.bank, src, g.paidWorth, 0, 1, TOB.MarkedBillsItem or "markedbills")
         else
             -- no room for the bag: pay it as dirty money so nothing is lost
-            Bridge.AddMoney(src, g.paidWorth, true)
+            Bridge.AddMoney(src, g.paidWorth, "black")
             RecordPayout(g.bank, src, g.paidWorth, g.paidWorth, 0)
             TriggerClientEvent("TOB_fh:bagFull", src)
         end

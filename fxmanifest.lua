@@ -3,7 +3,7 @@ game "gta5"
 lua54 "yes"
 
 author "Vega"
-description "Paleto and Fleeca bank heists for Qbox, ESX, QBCore and vRP"
+description "Paleto and Fleeca bank heists for Qbox, ESX and QBCore"
 version "2.1.0"
 repository "https://github.com/Vega421/tobs_bankrobbery"
 
@@ -29,14 +29,15 @@ shared_scripts {
     "config/banks.lua",
     "locales/locales.lua",
     "bridge/framework.lua",
+    "bridge/shared/callbacks.lua",
 }
 
 client_scripts {
-    "client/callbacks.lua",
     "bridge/qbox/client.lua",
     "bridge/esx/client.lua",
     "bridge/qb/client.lua",
-    "bridge/vrp/client.lua",
+    "bridge/shared/ui.lua",
+    "bridge/shared/notify.lua",
     "client/util.lua",
     "client/heist.lua",
     "client/loot.lua",
@@ -49,11 +50,12 @@ client_scripts {
 
 server_scripts {
     "config/config_server.lua",
-    "server/callbacks.lua",
-    "bridge/qbox/server.lua",
-    "bridge/esx/server.lua",
-    "bridge/qb/server.lua",
-    "bridge/vrp/server.lua",
+    "bridge/shared/db.lua",
+    "bridge/qbox/core.lua",
+    "bridge/qbox/data.lua",
+    "bridge/qb/core.lua",
+    "bridge/esx/core.lua",
+    "bridge/esx/data.lua",
     "server/util.lua",
     "server/heist.lua",
     "server/loot.lua",
