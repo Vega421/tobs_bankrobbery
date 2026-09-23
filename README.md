@@ -45,6 +45,8 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 
 See the [installation guide](https://vega421.github.io/scripts/tobs-bankrobbery/installation/) for details.
 
+**Testing on a server:** [TESTING.md](TESTING.md) is a checklist: the heist itself, then a short list per framework (Qbox, QBCore's three inventories, ESX's black money account).
+
 **Requires:** one of qbx_core, es_extended or qb-core · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) (optional) · [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional)
 
 ## Development
