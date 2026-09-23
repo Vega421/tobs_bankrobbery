@@ -88,11 +88,16 @@ end
 -- nothing (a call into the framework copies the whole player). A player who loaded before this
 -- resource started is asked with ask(src); a "no" stands for 5 seconds before it is asked again.
 function BridgeLoadedList(ask)
-    local list = {}   -- [src] = true, or the GetGameTimer() until which "not loaded" stands
+    local list = {}   -- [src] = true, "hold", or the GetGameTimer() until which "not loaded" stands
     local L = {}
     function L.Set(src, loaded)
         src = tonumber(src)
         if src then list[src] = loaded and true or GetGameTimer() + 5000 end
+    end
+    -- Not loaded until an event says so, without asking the framework meanwhile (the player picked a
+    -- character, but is still on a spawn menu)
+    function L.Hold(src)
+        if tonumber(src) then list[tonumber(src)] = "hold" end
     end
     function L.Forget(src)
         if tonumber(src) then list[tonumber(src)] = nil end
@@ -102,6 +107,7 @@ function BridgeLoadedList(ask)
         if src == nil then return false end
         local v = list[src]
         if v == true then return true end
+        if v == "hold" then return false end
         if v and GetGameTimer() < v then return false end
         local loaded = ask(src) == true
         L.Set(src, loaded)

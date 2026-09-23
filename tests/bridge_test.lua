@@ -216,12 +216,19 @@ check("qb: a player loaded before the start is asked once", b.IsLoaded(1) == tru
 F.Fire("QBCore:Server:OnPlayerUnload", nil, 1)
 check("qb: unloaded (character selection) without asking qb-core", b.IsLoaded(1) == false and F.calls == 1)
 F.Fire("QBCore:Server:PlayerLoaded", nil, {PlayerData = {source = 1}})
-check("qb: loaded again from the event", b.IsLoaded(1) == true and F.calls == 1)
-check("qb: a player who isn't loaded", b.IsLoaded(9) == false and b.IsLoaded(9) == false and F.calls == 2)
+F.clock = F.clock + 60000
+check("qb: a picked character on qb-spawn's menu isn't loaded yet (and qb-core isn't asked)",
+      b.IsLoaded(1) == false and F.calls == 1)
+F.Fire("QBCore:Server:OnPlayerLoaded", 1)
+check("qb: loaded once their game says it spawned", b.IsLoaded(1) == true and F.calls == 2)
+F.Fire("QBCore:Server:OnPlayerLoaded", 9)
+check("qb: the spawn event without a character does nothing", b.IsLoaded(9) == false)
+F.calls = 0
+check("qb: a player who isn't loaded", b.IsLoaded(8) == false and b.IsLoaded(8) == false and F.calls == 1)
 F.clock = F.clock + 6000
-check("qb: a 'no' is asked again after 5 s", b.IsLoaded(9) == false and F.calls == 3)
+check("qb: a 'no' is asked again after 5 s", b.IsLoaded(8) == false and F.calls == 2)
 F.Fire("playerDropped", 1, "Exiting")
-check("qb: forgotten when the player leaves (asked again)", b.IsLoaded(1) == true and F.calls == 4)
+check("qb: forgotten when the player leaves (asked again)", b.IsLoaded(1) == true and F.calls == 3)
 F.meta = {inlaststand = true}
 check("qb: last stand counts as dead", b.IsDead(1) == true)
 F.meta = {isdead = true}
