@@ -581,6 +581,8 @@ function HeistTick()
             if h.owner ~= nil and (h.stage == "hacking" or h.stage == "vaultitem" or h.stage == "open")
                 and not IsNear(h.owner, TOB.Banks[bank].doors.startloc, OWNER_RADIUS) then
                 if h.stage == "open" then
+                    -- the leader is out of range of the closing message the players in the bank get
+                    TriggerClientEvent("tobsbank:leaderLeft", h.owner, bank)
                     StartClosing(bank, "the robber left the bank")
                 else
                     FailHeist(bank, "robber_left")

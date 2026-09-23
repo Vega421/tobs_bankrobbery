@@ -267,8 +267,10 @@ at(1, vector3(0, 0, 1)); clear(); tick(1000)
 check("leaving during the hack fails the heist", Heists.B1 == nil and last("tobsbank:heistFailed").args[2] == "robber_left")
 commands[SV.ResetCommand](0, {"B1"})
 openHeist("B1", 1)
-at(1, vector3(0, 0, 1)); tick(1000)
+at(1, vector3(0, 0, 1)); clear(); tick(1000)
 check("leaving during looting closes the vault", Heists.B1.stage == "closing")
+check("leaving during looting tells the leader (out of range of the closing message)",
+    last("tobsbank:leaderLeft") ~= nil and last("tobsbank:leaderLeft").target == 1)
 commands[SV.ResetCommand](0, {"B1"})
 
 -- 14. the robber disconnects: the nearest crew member takes over

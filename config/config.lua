@@ -77,6 +77,9 @@ TOB.DyePack = {
 
 -- Animations and sound
 TOB.LaptopHack = true -- laptop hacking animation at the panel during the hack
+TOB.LaptopSceneOffset = 1.0 -- metres above a bank's animcoords (floor level) the laptop scene is placed: 1.0 =
+                            -- standing height. At 0 the player went under the floor (Qbox test); lower it a
+                            -- little if the laptop floats above the panel's shelf
 TOB.VaultItemAnim = "thermite" -- animation for TOB.VaultItem: "thermite" (charge + burning sparks) or "weld"
 TOB.Alarm = true -- play the bank's alarm (banks with alarm = "...") until the heist ends. Fleeca banks use a silent alarm
 
