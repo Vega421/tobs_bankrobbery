@@ -29,6 +29,8 @@ vehicle = {plate = "ABC 123", model = "sultan", owner = "ABC12345",
 | -------- | ------- |
 | `Bridge.GetPlayer(src)` | `person`, or `nil` when the player isn't loaded |
 | `Bridge.GetIdentifier(src)` | the person id, or `nil` |
+| `Bridge.IsLoaded(src)` | `true` once the character is in the world (not in character selection). Cheap enough to ask every second: Qbox's `isLoggedIn` state bag (set only once the player has spawned, so qbx_spawn's spawn menu doesn't count), and on QBCore / ESX a list kept from their load and logout events |
+| `Bridge.IsDead(src)` | `true` while dead or in last stand: the `isDead` state bag (qbx_medical, esx_ambulancejob), else the `isdead` / `inlaststand` metadata (Qbox, QBCore) |
 | `Bridge.GetJob(src)` | the `job` table, or `nil` |
 | `Bridge.IsPolice(src)` | `true` / `false` (uses `BridgeConfig.PoliceJobs` + `PoliceOnDuty`) |
 | `Bridge.CountPolice()` | number of police online |
@@ -40,6 +42,7 @@ vehicle = {plate = "ABC 123", model = "sultan", owner = "ABC12345",
 | -------- | ------- |
 | `Bridge.GetItemCount(src, item)` | number |
 | `Bridge.HasItem(src, item, count)` | `true` / `false` |
+| `Bridge.HasWeapon(src, weapon)` | `true` / `false` — `weapon` in any case (`"WEAPON_PISTOL"`); the item name's case per inventory and ESX's loadout are handled |
 | `Bridge.AddItem(src, item, count, metadata)` | `true` / `false` — `false` means the pockets are full |
 | `Bridge.RemoveItem(src, item, count)` | `true` / `false` — `false` means they didn't have it |
 | `Bridge.CanCarry(src, item, count)` | `true` / `false` |

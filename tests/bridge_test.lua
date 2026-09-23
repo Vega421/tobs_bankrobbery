@@ -8,8 +8,8 @@ local function check(label, cond)
 end
 
 -- The API every bridge must provide ----------------------------------------
-local SERVER_API = {"GetPlayer", "GetIdentifier", "GetJob", "IsPolice", "GetPlayersByJob", "CountPolice",
-                    "GetItemCount", "HasItem", "RemoveItem", "AddItem", "CanCarry",
+local SERVER_API = {"GetPlayer", "GetIdentifier", "IsLoaded", "IsDead", "GetJob", "IsPolice", "GetPlayersByJob", "CountPolice",
+                    "GetItemCount", "HasItem", "HasWeapon", "RemoveItem", "AddItem", "CanCarry",
                     "AddMoney", "RemoveMoney", "GetMoney", "Notify", "RegisterCallback",
                     "GetPerson", "SearchPeople", "GetVehicles", "GetVehicleByPlate",
                     "GetLicences", "SetLicence", "GetPhoneNumber"}
@@ -29,13 +29,21 @@ end
 local function FakeQbox(job, money)
     return {
         GetPlayer = function(_, src)
+            F.calls = (F.calls or 0) + 1
             if F.players[src] == nil then return nil end
             return {PlayerData = {citizenid = "ABC12345", money = money or {cash = 100, bank = 500},
                                   charinfo = {firstname = "John", lastname = "Doe", birthdate = "1990-01-01", phone = "555-0100"},
-                                  job = job}}
+                                  job = job, metadata = F.meta or {}}}
         end,
         AddMoney = function(_, src, account, amount) F.money = {account = account, amount = amount}; return true end,
         RemoveMoney = function() return true end,
+        -- like qbx_core: the number, or false for an unknown account or player
+        GetMoney = function(_, src, account)
+            if F.players[src] == nil then return false end
+            local m = money or {cash = 100, bank = 500}
+            if m[account] == nil then return false end
+            return m[account]
+        end,
     }
 end
 
@@ -75,7 +83,7 @@ check("black money item per framework", BlackMoneyItem() == "black_money")
 
 F.state = {qbx_core = "started", ox_inventory = "started", oxmysql = "started"}
 F.players = {[1] = true, [2] = true}
-local counts = {lockpick = 3}
+local counts = {lockpick = 3, WEAPON_PISTOL = 1}
 exports.ox_inventory = FakeOxInventory(counts)
 exports.qbx_core = FakeQbox({name = "police", onduty = true})
 local b = Load("qbox")
@@ -88,13 +96,36 @@ check("qbox: a player who isn't loaded is nil", b.GetPlayer(9) == nil)
 check("qbox: police counted", b.IsPolice(1) and b.CountPolice() == 2)
 check("qbox: item count and HasItem", b.GetItemCount(1, "lockpick") == 3 and b.HasItem(1, "lockpick", 3)
       and not b.HasItem(1, "lockpick", 4))
+check("qbox: weapons are ox items in capitals", b.HasWeapon(1, "weapon_pistol") and not b.HasWeapon(1, "WEAPON_SMG"))
 check("qbox: AddItem passes the metadata", b.AddItem(1, "markedbills", 1, {worth = 5000}) == true
       and F.added.meta.worth == 5000)
 b.AddMoney(1, 2500, "bank")
 check("qbox: money goes to the right account", F.money.account == "bank" and F.money.amount == 2500)
 b.AddMoney(1, 700, "black")
 check("qbox: dirty money is paid as an item", F.added.item == "black_money" and F.added.n == 700)
-check("qbox: GetMoney reads the account", b.GetMoney(1, "bank") == 500)
+F.calls = 0
+check("qbox: GetMoney reads the account", b.GetMoney(1, "bank") == 500 and b.GetMoney(1) == 100)
+check("qbox: GetMoney asks qbx_core for the number, not the whole player", F.calls == 0)
+check("qbox: GetMoney for an unknown account or player is 0", b.GetMoney(1, "crypto") == 0 and b.GetMoney(9, "cash") == 0)
+
+-- Loaded and dead: from state bags first, so a check every second doesn't call qbx_core
+F.calls = 0
+F.bags[1] = {isLoggedIn = true}
+F.bags[2] = {isLoggedIn = false}
+check("qbox: IsLoaded reads the isLoggedIn state bag, without calling qbx_core",
+      b.IsLoaded(1) == true and b.IsLoaded(2) == false and F.calls == 0)
+F.bags[1], F.bags[2] = nil, nil
+check("qbox: no isLoggedIn yet (spawn menu after picking a character) is not loaded, even with a citizenid",
+      b.GetIdentifier(1) ~= nil and b.IsLoaded(1) == false and b.IsLoaded(9) == false)
+F.bags[1] = {isDead = true}
+check("qbox: qbx_medical's isDead state bag", b.IsDead(1) == true)
+F.bags[1] = nil
+F.meta = {inlaststand = true}
+check("qbox: last stand in the metadata counts as dead", b.IsDead(1) == true)
+F.meta = {isdead = true}
+check("qbox: isdead in the metadata", b.IsDead(1) == true)
+F.meta = nil
+check("qbox: alive", b.IsDead(1) == false and b.IsDead(9) == false)
 
 exports.qbx_core = FakeQbox({name = "police", onduty = false})
 b = Load("qbox")
@@ -139,9 +170,10 @@ local function FakeQb(inventoryRunning)
     if inventoryRunning then F.state[inventoryRunning] = "started" end
     exports["qb-core"] = {GetCoreObject = function()
         return {Functions = {GetPlayer = function(src)
+            F.calls = (F.calls or 0) + 1
             if F.players[src] == nil then return nil end
             return {PlayerData = {citizenid = "QB1", money = {cash = 50}, charinfo = {firstname = "Jane", lastname = "Roe"},
-                                  job = {name = "police", grade = {level = 1}, onduty = true}},
+                                  job = {name = "police", grade = {level = 1}, onduty = true}, metadata = F.meta or {}},
                     Functions = {
                         GetItemByName = function(item) return {amount = 7} end,
                         AddItem = function() F.oldAdd = true; return true end,
@@ -154,17 +186,19 @@ local function FakeQb(inventoryRunning)
 end
 
 FakeQb("ox_inventory")
-exports.ox_inventory = FakeOxInventory({bandage = 2})
+exports.ox_inventory = FakeOxInventory({bandage = 2, WEAPON_SMG = 1})
 b = Load("qb")
+check("qb + ox_inventory: weapons in capitals", b.HasWeapon(1, "weapon_smg") == true)
 for _, name in ipairs(SERVER_API) do check("qb has " .. name, type(b[name]) == "function") end
 check("qb: ox_inventory is used when it runs", b.Inventory == "ox" and b.GetItemCount(1, "bandage") == 2)
 
 FakeQb("qb-inventory")
-exports["qb-inventory"] = {GetItemCount = function(_, src, item) return 5 end,
+exports["qb-inventory"] = {GetItemCount = function(_, src, item) return item == item:lower() and 5 or 0 end,
                            AddItem = function() return true end, RemoveItem = function() return true end,
                            CanAddItem = function() return true end}
 b = Load("qb")
 check("qb: qb-inventory when ox_inventory isn't running", b.Inventory == "qb" and b.GetItemCount(1, "bandage") == 5)
+check("qb + qb-inventory: weapons in lower case", b.HasWeapon(1, "WEAPON_PISTOL") == true)
 
 FakeQb(nil)
 b = Load("qb")
@@ -175,6 +209,29 @@ b.AddMoney(1, 300, "bank")
 check("qb: money", F.money.account == "bank" and F.money.amount == 300)
 check("qb: the database side is shared with Qbox", type(b.GetPerson) == "function")
 
+-- Loaded: kept from qb-core's events, asked only for players who loaded before the resource started
+F.calls = 0
+check("qb: a player loaded before the start is asked once", b.IsLoaded(1) == true and b.IsLoaded(1) == true
+      and F.calls == 1)
+F.Fire("QBCore:Server:OnPlayerUnload", nil, 1)
+check("qb: unloaded (character selection) without asking qb-core", b.IsLoaded(1) == false and F.calls == 1)
+F.Fire("QBCore:Server:PlayerLoaded", nil, {PlayerData = {source = 1}})
+check("qb: loaded again from the event", b.IsLoaded(1) == true and F.calls == 1)
+check("qb: a player who isn't loaded", b.IsLoaded(9) == false and b.IsLoaded(9) == false and F.calls == 2)
+F.clock = F.clock + 6000
+check("qb: a 'no' is asked again after 5 s", b.IsLoaded(9) == false and F.calls == 3)
+F.Fire("playerDropped", 1, "Exiting")
+check("qb: forgotten when the player leaves (asked again)", b.IsLoaded(1) == true and F.calls == 4)
+F.meta = {inlaststand = true}
+check("qb: last stand counts as dead", b.IsDead(1) == true)
+F.meta = {isdead = true}
+check("qb: qb-ambulancejob's isdead", b.IsDead(1) == true)
+F.meta = nil
+F.bags[1] = {isDead = true}
+check("qb: an isDead state bag counts too", b.IsDead(1) == true)
+F.bags[1] = nil
+check("qb: alive", b.IsDead(1) == false)
+
 -- ESX -----------------------------------------------------------------------
 
 local esxPlayer
@@ -183,6 +240,7 @@ local function FakeEsx(canCarry)
     esxPlayer = {
         identifier = "char1:abc", job = {name = "police", label = "Police", grade = 2, grade_label = "Sergeant"},
         getInventoryItem = function(item) return {count = 4} end,
+        hasWeapon = function(name) return name == "WEAPON_PISTOL" end,
         addInventoryItem = function(item, n) F.added = {item = item, n = n} end,
         removeInventoryItem = function(item, n) F.removed = {item = item, n = n} end,
         canCarryItem = function() return canCarry ~= false end,
@@ -209,6 +267,7 @@ for _, name in ipairs(SERVER_API) do check("esx has " .. name, type(b[name]) == 
 check("esx: no item metadata", b.Metadata == false)
 check("esx: the person shape is the same", b.GetPlayer(1).firstname == "Erik" and b.GetPlayer(1).job.grade == 2)
 check("esx: police have no duty, so the job alone counts", b.IsPolice(1) and b.CountPolice() == 2)
+check("esx: weapons from the loadout", b.HasWeapon(1, "weapon_pistol") and not b.HasWeapon(1, "WEAPON_SMG"))
 check("esx: items", b.GetItemCount(1, "bread") == 4 and b.RemoveItem(1, "bread", 2) == true)
 b.AddMoney(1, 900, "black")
 check("esx: dirty money goes to the black_money account", F.money.account == "black_money" and F.money.amount == 900)
@@ -216,6 +275,14 @@ check("esx: GetMoney per account", b.GetMoney(1, "black") == 1200 and b.GetMoney
 check("esx data: users row", b.GetPerson("char1:abc").lastname == "Svensson")
 check("esx data: the vehicle JSON gives the model", b.GetVehicles("char1:abc")[1].model == "blista")
 check("esx data: licences from user_licenses", b.GetLicences("char1:abc").drive == true)
+F.Fire("esx:playerLogout", nil, 1)
+check("esx: logged out (character selection)", b.IsLoaded(1) == false)
+F.Fire("esx:playerLoaded", nil, 1, esxPlayer, false)
+check("esx: loaded from the event", b.IsLoaded(1) == true)
+F.bags[1] = {isDead = true}
+check("esx: esx_ambulancejob's isDead state bag", b.IsDead(1) == true)
+F.bags[1] = nil
+check("esx: alive", b.IsDead(1) == false)
 
 FakeEsx(false)   -- pockets full
 b = Load("esx")
