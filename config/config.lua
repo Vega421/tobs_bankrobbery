@@ -1,6 +1,6 @@
 TOB = {}
 
--- Framework: "auto" (detects qbx_core, es_extended, qb-core or vrp), "qbox", "esx", "qb" or "vrp"
+-- Framework: "auto" (detects qbx_core, es_extended or qb-core), "qbox", "esx" or "qb"
 TOB.Framework = "auto"
 
 -- Language: "en" (English), "da" (Danish), "de" (German), "sv" (Swedish), "no" (Norwegian) or "nl" (Dutch).
@@ -10,7 +10,6 @@ TOB.Locale = "en"
 -- Police
 TOB.PoliceJob = "police" -- ESX / QBCore / Qbox job that counts as police. Several jobs: {"police", "sheriff"}
 TOB.PoliceOnDuty = true -- QBCore / Qbox: only count officers who are on duty
-TOB.PoliceGroup = "Politi-Job" -- vRP group that counts as police
 
 -- Heist
 TOB.mincops = 4 -- police needed online to start the heist
@@ -50,7 +49,7 @@ TOB.GateHackTime = 10000 -- milliseconds the gate hack takes
 TOB.TrolleyCash = {min = 50000, max = 80000} -- cash in one full trolley (3 trolleys per heist)
 TOB.GrabTime = 37 -- seconds it takes to empty a trolley (the length of the grab animation)
 TOB.black = false -- true pays dirty money instead of cash (ESX: the black_money account, others: the TOB.blackmoney item)
-TOB.blackmoney = "auto" -- dirty money item: "auto" = "dirty_money" on vRP, "black_money" on QBCore / Qbox
+TOB.blackmoney = "auto" -- dirty money item: "auto" = "black_money" (QBCore / Qbox)
 TOB.RewardItem = "" -- give this item instead of money, e.g. "markedbills". "" = pay money
 TOB.RewardItemCount = "cash" -- "cash" = item count equals the cash amount (money-like items), or the number of items in a full trolley (e.g. 10 bags)
 -- Marked bills (QBCore / Qbox laundering): each trolley pays one item whose metadata holds its cash value
@@ -140,3 +139,13 @@ end
 -- Banks
 TOB.FleecaBanks = true -- include the 6 Fleeca banks. Set false if you run another Fleeca heist script
 -- The banks themselves (positions, and per-bank cash and cooldown) are in config/banks.lua
+
+-- The framework bridge (bridge/, shared with the other tobs_ scripts) reads these. Don't change
+-- them here: change the TOB settings above. See bridge/README.md.
+BridgeConfig = {
+    Framework = TOB.Framework,
+    PoliceJobs = TOB.PoliceJob,
+    PoliceOnDuty = TOB.PoliceOnDuty,
+    BlackMoney = TOB.blackmoney,
+    Notify = "framework", -- this script has its own Notify() in client/util.lua (TOB.Notify)
+}

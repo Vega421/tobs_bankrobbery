@@ -108,7 +108,7 @@ AddEventHandler("TOB_fh:drillDone", function(bank, box, success)
         TriggerClientEvent("TOB_fh:boxReward", _source, L("box_empty"))
     elseif r.type == "money" then
         local amount = math.random(r.min or 0, r.max or r.min or 0)
-        if pay then Bridge.AddMoney(_source, amount, TOB.black) end
+        if pay then Bridge.AddMoney(_source, amount, TOB.black and "black" or "cash") end
         RecordPayout(bank, _source, amount, pay and amount or 0, 0)
         TriggerClientEvent("TOB_fh:boxReward", _source, L("box_money", Money(amount)))
     elseif count > 0 then

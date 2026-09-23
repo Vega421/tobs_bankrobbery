@@ -67,7 +67,7 @@ dofile("config/config.lua"); dofile("config/banks.lua"); dofile("locales/locales
 -- Fake framework bridge (the real ones are tested in tests/bridge_test.lua)
 POLICE = false
 RUNNING_HEISTS = {} -- heists running when this player joins (test 10)
-Bridge = {NotifyFallback = "native",
+Bridge = {FrameworkNotify = function(m) notes[#notes + 1] = m end,
           Init = function(cb) INITCB = cb end,
           IsPolice = function() return POLICE end,
           TriggerCallback = function(n, cb) cb({B1 = TOB.Banks.B1, F1 = TOB.Banks.F1}, DOORS, RUNNING_HEISTS) end,

@@ -29,7 +29,7 @@ function Notify(ntype, msg, duration)
         elseif GetResourceState("mythic_notify") == "started" then
             mode = "mythic_notify"
         else
-            mode = Bridge.NotifyFallback
+            mode = Bridge.FrameworkNotify and "framework" or "native"
         end
     end
 
@@ -38,7 +38,7 @@ function Notify(ntype, msg, duration)
     elseif mode == "mythic_notify" then
         exports["mythic_notify"]:SendAlert(ntype == "warning" and "error" or ntype, msg, duration)
     elseif mode == "esx" or mode == "framework" then
-        Bridge.Notify(msg)
+        Bridge.FrameworkNotify(msg, ntype)
     else
         BeginTextCommandThefeedPost("STRING")
         AddTextComponentSubstringPlayerName(msg)
