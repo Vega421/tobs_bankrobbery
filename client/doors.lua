@@ -2,6 +2,7 @@
 -- The gate uses GTA's door system, registered locally for each player; the server decides if it's locked.
 
 local gateRegistered = {} -- [bank] = true once the gate is in the door system
+GATE_SEARCH = 4.0         -- metres around gate.loc to look for the gate model
 
 local function GateDoorHash(bank)
     return GetHashKey("tobs_bankrobbery_gate_" .. bank)
@@ -26,7 +27,9 @@ function DoorThreads()
                 if #(pcoords - v[1].loc) < 60.0 then
                     near = true
                     if not gateRegistered[k] then
-                        local obj = GetClosestObjectOfType(v[1].loc.x, v[1].loc.y, v[1].loc.z, 1.5, GateModel(k), false, false, false)
+                        -- 4 m, not 1.5: a gate.loc a little off (the old Fleeca ones were ~2 m from the gate)
+                        -- still finds it; a bank has one gate of its model
+                        local obj = GetClosestObjectOfType(v[1].loc.x, v[1].loc.y, v[1].loc.z, GATE_SEARCH, GateModel(k), false, false, false)
                         if obj ~= 0 then
                             local c = GetEntityCoords(obj)
                             AddDoorToSystem(GateDoorHash(k), GateModel(k), c.x, c.y, c.z, false, false, false)

@@ -75,6 +75,11 @@ function Bridge.RegisterCallback(name, fn) callbacks[name] = fn end
 
 -- LOAD THE SCRIPT --
 dofile("config/config.lua"); dofile("config/banks.lua"); dofile("locales/locales.lua"); dofile("config/config_server.lua")
+-- The shipped config has an inner gate at every bank (Paleto too). These tests use Paleto as the bank
+-- WITHOUT one and Fleeca F1 as the bank with one, so both kinds stay covered; the shipped gates are
+-- checked separately below.
+SHIPPED_B1 = {secondloc = TOB.Banks.B1.doors.secondloc, gateModel = TOB.Banks.B1.gateModel, gate = TOB.Banks.B1.gate}
+TOB.Banks.B1.doors.secondloc = nil
 TOB.Banks.F6.enabled = false
 TOB.Banks.BROKEN = {label = "Broken bank", doors = {}}   -- missing settings: must be skipped, not crash
 TOB.TrolleyCash = {min = 60000, max = 60000}              -- fixed so payouts can be checked exactly
@@ -128,6 +133,12 @@ check("broken bank skipped with a warning", TOB.Banks.BROKEN == nil and printedH
 check("disabled bank removed", TOB.Banks.F6 == nil)
 check("saved cooldown loaded after a restart", TOB.Banks.F2.lastrobbed == kvp["lastrobbed:F2"])
 check("fleeca gate locked by default", Doors.F1[1].locked == true and Doors.B1[1].locked == false)
+-- the shipped gates (first Qbox test: the gates weren't where the config said, so they never locked)
+check("shipped Paleto has its inner gate: the vaulgate02 model at the gate, and a hack panel",
+    SHIPPED_B1.gateModel == "v_ilev_cbankvaulgate02" and SHIPPED_B1.secondloc ~= nil
+    and math.abs(SHIPPED_B1.gate.loc.x - (-106.26)) < 0.01 and math.abs(SHIPPED_B1.gate.loc.y - 6476.01) < 0.01)
+check("shipped Fleeca gates are at the gate, not at the hack panel (Alta, from qb-doorlock)",
+    math.abs(TOB.Banks.F1.gate.loc.x - 314.61) < 0.01 and math.abs(TOB.Banks.F1.gate.loc.y - (-285.82)) < 0.01)
 
 -- 1. no cops
 COPS = 0; INV[1] = {id_card_f = 1}

@@ -64,6 +64,11 @@ local function lastExport(fn) for i = #exportCalls, 1, -1 do if exportCalls[i].f
 local function lastServer(n) for i = #serverEvents, 1, -1 do if serverEvents[i][1] == n then return serverEvents[i] end end end
 
 dofile("config/config.lua"); dofile("config/banks.lua"); dofile("locales/locales.lua")
+-- The shipped config has an inner gate at every bank (Paleto too). These tests use Paleto as the bank
+-- WITHOUT one and Fleeca F1 as the bank with one, so both kinds stay covered; the shipped gates are
+-- checked separately below.
+SHIPPED_B1 = {secondloc = TOB.Banks.B1.doors.secondloc, gateModel = TOB.Banks.B1.gateModel, gate = TOB.Banks.B1.gate}
+TOB.Banks.B1.doors.secondloc = nil
 -- Fake framework bridge (the real ones are tested in tests/bridge_test.lua)
 POLICE = false
 RUNNING_HEISTS = {} -- heists running when this player joins (test 10)
@@ -247,10 +252,12 @@ check("dye pack on someone out of range: nothing", (CALLS.StartParticleFxLoopedO
 -- 12. the gate uses GTA's door system
 local gateThread = #threads + 1
 DoorThreads()
-GetClosestObjectOfType = function() return 55 end
+local searchRadius
+GetClosestObjectOfType = function(x, y, z, radius) searchRadius = searchRadius or radius; return 55 end
 PEDPOS = TOB.Banks.F1.gate.loc
 STOPWAIT = true; pcall(threads[gateThread]); STOPWAIT = false
 check("gate registered in the door system", (CALLS.AddDoorToSystem or 0) == 1)
+check("the gate is searched for within 4 m (a gate.loc a little off still finds it)", searchRadius == 4.0)
 local applied = CALLS.DoorSystemSetDoorState or 0
 check("gate lock applied", applied >= 1)
 handlers["tobsbank:toggleDoor"]("F1", false)
