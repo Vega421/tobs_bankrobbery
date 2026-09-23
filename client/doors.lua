@@ -92,15 +92,15 @@ end
 function ToggleDoor(k, i)
     DoorBusy = true
     if i == 2 then
-        TriggerServerEvent("TOB_fh:toggleVault", k, not Doors[k][i].locked)
+        TriggerServerEvent("tobsbank:toggleVault", k, not Doors[k][i].locked)
     else
-        TriggerServerEvent("TOB_fh:toggleDoor", k, not Doors[k][i].locked)
+        TriggerServerEvent("tobsbank:toggleDoor", k, not Doors[k][i].locked)
     end
     SetTimeout(3000, function() DoorBusy = false end) -- in case the server ignored it
 end
 
-RegisterNetEvent("TOB_fh:toggleDoor")
-AddEventHandler("TOB_fh:toggleDoor", function(key, state)
+RegisterNetEvent("tobsbank:toggleDoor")
+AddEventHandler("tobsbank:toggleDoor", function(key, state)
     if Doors[key] ~= nil then
         Doors[key][1].locked = state
         ApplyGate(key)
@@ -108,16 +108,19 @@ AddEventHandler("TOB_fh:toggleDoor", function(key, state)
     DoorBusy = false
 end)
 
-RegisterNetEvent("TOB_fh:toggleVault")
-AddEventHandler("TOB_fh:toggleVault", function(key, state)
+RegisterNetEvent("tobsbank:toggleVault")
+AddEventHandler("tobsbank:toggleVault", function(key, state)
     if Doors[key] == nil then return end
     local obj = GetVaultObject(key)
 
     Doors[key][2].locked = state
     -- vault closed: the deposit boxes can't be drilled any more
-    if state then LootActive[key] = false end
+    if state then
+        LootActive[key] = false
+        if #(GetEntityCoords(PlayerPedId()) - StartVec(key)) < 40.0 then Notify("error", L("vault_closing")) end
+    end
     -- Only players near the bank have the vault loaded. Everyone else just keeps the state,
-    -- and gets the final door angle from the server (TOB_fh:vaultState).
+    -- and gets the final door angle from the server (tobsbank:vaultState).
     if obj == 0 then
         DoorBusy = false
         return
@@ -130,12 +133,12 @@ AddEventHandler("TOB_fh:toggleVault", function(key, state)
         Citizen.Wait(10)
     end
     Doors[key][2].state = GetEntityHeading(obj)
-    TriggerServerEvent("TOB_fh:updateVaultState", key, Doors[key][2].state)
+    TriggerServerEvent("tobsbank:updateVaultState", key, Doors[key][2].state)
     DoorBusy = false
 end)
 
-RegisterNetEvent("TOB_fh:vaultState")
-AddEventHandler("TOB_fh:vaultState", function(key, heading)
+RegisterNetEvent("tobsbank:vaultState")
+AddEventHandler("tobsbank:vaultState", function(key, heading)
     if Doors[key] ~= nil then
         Doors[key][2].state = heading
     end

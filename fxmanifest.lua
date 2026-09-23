@@ -4,7 +4,7 @@ lua54 "yes"
 
 author "Vega"
 description "Paleto and Fleeca bank heists for Qbox, ESX and QBCore"
-version "2.1.0"
+version "1.0.0"
 repository "https://github.com/Vega421/tobs_bankrobbery"
 
 -- Minigames per bank (played with tobs_minigames when it runs), admin tools (/tobpause, /tobtest,

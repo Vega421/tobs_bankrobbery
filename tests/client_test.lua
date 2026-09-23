@@ -95,35 +95,35 @@ check("start option works", zoneNamed("tob_start_B1").canInteract() == true)
 check("vault zone has the vault-item option", zoneNamed("tob_vaultitem_B1") ~= nil)
 
 -- 2. the server says a bank is busy: nobody sees "start heist"
-handlers["TOB_fh:bankState"]("B1", true)
+handlers["tobsbank:bankState"]("B1", true)
 check("bank marked busy", TOB.Banks.B1.onaction == true and zoneNamed("tob_start_B1").canInteract() == false)
-handlers["TOB_fh:bankState"]("B1", false)
+handlers["tobsbank:bankState"]("B1", false)
 
 -- 3. loot phase: options follow the trolley kind, and the grab waits for the server
 check("no looting before the vault opens", not zoneNamed("tob_loot_B1_2_cash").canInteract())
 local data = {}
 for k, v in pairs(TOB.Banks.B1) do data[k] = v end
 data.special = {trolley2 = "gold"}
-handlers["TOB_fh:startLoot_c"](data, "B1")
+handlers["tobsbank:startLoot_c"](data, "B1")
 check("loot phase active", LootActive.B1 == true and LootOpen.B1 == true)
 check("gold trolley shows the gold option", zoneNamed("tob_loot_B1_2_gold").canInteract() == true and zoneNamed("tob_loot_B1_2_cash").canInteract() == false)
 check("cash trolley shows the cash option", zoneNamed("tob_loot_B1_1_cash").canInteract() == true)
 zoneNamed("tob_loot_B1_1_cash").onSelect()
-check("loot asks the server first", lastServer("TOB_fh:lootup")[3] == "Loot1")
+check("loot asks the server first", lastServer("tobsbank:lootup")[3] == "Loot1")
 local asked = #serverEvents
 zoneNamed("tob_loot_B1_1_cash").onSelect()
 check("no second request while waiting", #serverEvents == asked)
-handlers["TOB_fh:lootResult"]("B1", "Loot1", false, "trolley_taken")
+handlers["tobsbank:lootResult"]("B1", "Loot1", false, "trolley_taken")
 check("refused loot is explained", notes[#notes] == L("trolley_taken"))
-handlers["TOB_fh:lootup_c"]("B1", "Loot2")
+handlers["tobsbank:lootup_c"]("B1", "Loot2")
 check("taken trolley hidden", LootCheck.B1.Loot2 == true and zoneNamed("tob_loot_B1_2_gold").canInteract() == false)
-handlers["TOB_fh:lootResult"]("B1", "Loot1", true)
-check("missing trolley: grab ends at once", lastServer("TOB_fh:grabDone") ~= nil)
-handlers["TOB_fh:bagFull"]()
+handlers["tobsbank:lootResult"]("B1", "Loot1", true)
+check("missing trolley: grab ends at once", lastServer("tobsbank:grabDone") ~= nil)
+handlers["tobsbank:bagFull"]()
 check("full pockets explained", notes[#notes] == L("bag_full"))
-handlers["TOB_fh:closing"]("B1", 30)
+handlers["tobsbank:closing"]("B1", 30)
 check("closing stops the trolleys", LootOpen.B1 == false and zoneNamed("tob_loot_B1_1_cash").canInteract() == false)
-handlers["TOB_fh:cleanup"]("B1")
+handlers["tobsbank:cleanup"]("B1")
 check("cleanup ends the loot phase", LootActive.B1 == false and BoxState.B1 == nil)
 
 -- 4. minigames: ox_lib, none, your own function, a broken function
@@ -145,48 +145,48 @@ TOB.DrillMinigame = {"easy"}
 
 -- 5. starting a heist: dispatch and the hack
 RUNNING["ps-dispatch"] = true
-handlers["TOB_fh:outcome"](true, "B1")
+handlers["tobsbank:outcome"](true, "B1")
 check("ps-dispatch Paleto alert", lastExport("PaletoBankRobbery") ~= nil and lastExport("PaletoBankRobbery").res == "ps-dispatch")
-check("hack started after the minigame", lastServer("TOB_fh:hackStarted")[2] == "B1")
+check("hack started after the minigame", lastServer("tobsbank:hackStarted")[2] == "B1")
 check("leading the heist", Leading == "B1" and Check.B1 == true)
-handlers["TOB_fh:outcome"](true, "F1")
+handlers["tobsbank:outcome"](true, "F1")
 check("ps-dispatch Fleeca alert", lastExport("FleecaBankRobbery") ~= nil)
 RUNNING["ps-dispatch"] = nil
 local customCalled
 TOB.DispatchAlert = function(coords, bank) customCalled = bank end
-handlers["TOB_fh:outcome"](true, "B1")
+handlers["tobsbank:outcome"](true, "B1")
 check("custom dispatch without ps-dispatch", customCalled == "B1")
 SKILL = false
-handlers["TOB_fh:outcome"](true, "B1")
-check("failed minigame tells the server", lastServer("TOB_fh:hackFailed")[2] == "B1")
+handlers["tobsbank:outcome"](true, "B1")
+check("failed minigame tells the server", lastServer("tobsbank:hackFailed")[2] == "B1")
 SKILL = true
-handlers["TOB_fh:outcome"](false, "nope")
+handlers["tobsbank:outcome"](false, "nope")
 check("refused start is explained", notes[#notes] == "nope")
-handlers["TOB_fh:heistFailed"]("B1", "vault_timeout")
+handlers["tobsbank:heistFailed"]("B1", "vault_timeout")
 check("failed heist clears the leader", rawget(_G, "Leading") == nil and notes[#notes] == L("vault_timeout"))
 
 -- 6. vault item, gate and taking over
-handlers["TOB_fh:awaitVaultItem"]("B1")
+handlers["tobsbank:awaitVaultItem"]("B1")
 check("vault item prompt", AwaitingVault.B1 == true and zoneNamed("tob_vaultitem_B1").canInteract() == true)
-handlers["TOB_fh:vaultItemResult"]("B1", false)
+handlers["tobsbank:vaultItemResult"]("B1", false)
 check("missing vault item explained", notes[#notes] == L("no_vault_item", TOB.VaultItemLabel))
-handlers["TOB_fh:vaultOpened"]("F1", nil, {})
+handlers["tobsbank:vaultOpened"]("F1", nil, {})
 check("gate hint after the Fleeca vault opens", AwaitingGate.F1 == true and zoneNamed("tob_gate_F1").canInteract() == true)
-handlers["TOB_fh:gateResult"]("F1", false)
+handlers["tobsbank:gateResult"]("F1", false)
 check("missing gate item explained", notes[#notes] == L("no_gate_item", TOB.GateItemLabel))
 AwaitingVault.B1 = nil
-handlers["TOB_fh:takeover"]("B1", {stage = "vaultitem", itemUsed = false})
+handlers["tobsbank:takeover"]("B1", {stage = "vaultitem", itemUsed = false})
 check("taking over the vault item step", Leading == "B1" and AwaitingVault.B1 == true)
 check("new leader is told", notes[#notes] == L("use_vault_item", TOB.VaultItemLabel) or notes[#notes - 1] == L("you_lead"))
-handlers["TOB_fh:forceReset"]("B1")
+handlers["tobsbank:forceReset"]("B1")
 check("admin reset clears the heist", AwaitingVault.B1 == nil and rawget(_G, "Leading") == nil)
 
 -- 7. police
 POLICE = true
 local blips = CALLS.AddBlipForCoord or 0
-handlers["TOB_fh:policenotify"]("B1")
+handlers["tobsbank:policenotify"]("B1")
 check("police alert and blip", notes[#notes] == L("police_alert") and CALLS.AddBlipForCoord == blips + 1)
-handlers["TOB_fh:bankState"]("B1", false)
+handlers["tobsbank:bankState"]("B1", false)
 check("blip removed when the heist ends", (CALLS.RemoveBlip or 0) >= 1)
 check("police can lock doors", zoneNamed("tob_lock_B1_1").canInteract() == true and zoneNamed("tob_start_B1").canInteract() == false)
 POLICE = false
@@ -203,15 +203,15 @@ Prompt(vector3(0, 0, 0), "Test", 0.5, 1.0)
 check("same text isn't sent again", #exportCalls == before)
 
 -- 9. other events
-handlers["TOB_fh:drillResult"]("B1", 1, false, "already_drilling")
+handlers["tobsbank:drillResult"]("B1", 1, false, "already_drilling")
 check("drilling refusal explained", notes[#notes] == L("already_drilling"))
-handlers["TOB_fh:boxState"]("B1", 2, "opened")
+handlers["tobsbank:boxState"]("B1", 2, "opened")
 check("box state stored", BoxState.B1[2] == "opened")
-handlers["TOB_fh:heistTotal"]("12,000", "30,000")
+handlers["tobsbank:heistTotal"]("12,000", "30,000")
 check("heist total shown", notes[#notes] == L("heist_total", "12,000", "30,000"))
-handlers["TOB_fh:timer"]("B1", 90)
+handlers["tobsbank:timer"]("B1", 90)
 check("timer stored", TimerEnds.B1 ~= nil)
-handlers["TOB_fh:vaultState"]("B1", 123.0)
+handlers["tobsbank:vaultState"]("B1", 123.0)
 check("vault angle stored", Doors.B1[2].state == 123.0)
 check("bankcoords command registered", commands[TOB.CoordsCommand] ~= nil)
 -- 10. joining the server during a heist: take part from where it is
@@ -226,22 +226,22 @@ check("no loot phase before the vault opens", not LootActive.F1)
 -- 11. GPS tracker (police) and dye pack
 POLICE = true
 local blipsBefore = CALLS.AddBlipForCoord or 0
-handlers["TOB_fh:trackerPos"](12, vector3(10, 20, 30), 120)
+handlers["tobsbank:trackerPos"](12, vector3(10, 20, 30), 120)
 check("tracker blip for police", CALLS.AddBlipForCoord == blipsBefore + 1 and notes[#notes] == L("tracker_police", 120))
-handlers["TOB_fh:trackerPos"](12, vector3(11, 20, 30), 115)
+handlers["tobsbank:trackerPos"](12, vector3(11, 20, 30), 115)
 check("tracker blip moves, no second blip", CALLS.AddBlipForCoord == blipsBefore + 1 and (CALLS.SetBlipCoords or 0) >= 1)
 local removed = CALLS.RemoveBlip or 0
-handlers["TOB_fh:trackerEnd"](12)
+handlers["tobsbank:trackerEnd"](12)
 check("tracker blip removed", CALLS.RemoveBlip == removed + 1)
 POLICE = false
-handlers["TOB_fh:trackerPos"](13, vector3(10, 20, 30), 120)
+handlers["tobsbank:trackerPos"](13, vector3(10, 20, 30), 120)
 check("no tracker blip for robbers", CALLS.AddBlipForCoord == blipsBefore + 1)
-handlers["TOB_fh:trackerWarn"]()
+handlers["tobsbank:trackerWarn"]()
 check("robber warned", notes[#notes] == L("tracker_warn"))
-handlers["TOB_fh:dyePack"](7, 10)
+handlers["tobsbank:dyePack"](7, 10)
 check("dye pack: the robber is told", notes[#notes] == L("dye_pack"))
 check("dye pack: red smoke", (CALLS.StartParticleFxLoopedOnEntity or 0) == 1)
-handlers["TOB_fh:dyePack"](99, 10)
+handlers["tobsbank:dyePack"](99, 10)
 check("dye pack on someone out of range: nothing", (CALLS.StartParticleFxLoopedOnEntity or 0) == 1)
 
 -- 12. the gate uses GTA's door system
@@ -253,7 +253,7 @@ STOPWAIT = true; pcall(threads[gateThread]); STOPWAIT = false
 check("gate registered in the door system", (CALLS.AddDoorToSystem or 0) == 1)
 local applied = CALLS.DoorSystemSetDoorState or 0
 check("gate lock applied", applied >= 1)
-handlers["TOB_fh:toggleDoor"]("F1", false)
+handlers["tobsbank:toggleDoor"]("F1", false)
 check("gate unlock applied at once", CALLS.DoorSystemSetDoorState == applied + 1 and Doors.F1[1].locked == false)
 STOPWAIT = true; pcall(threads[gateThread]); STOPWAIT = false
 check("gate registered only once", CALLS.AddDoorToSystem == 1)
@@ -263,58 +263,58 @@ GetClosestObjectOfType = function() return 0 end
 local function lastStart() local e = lastExport("Start") return e and e.res == "tobs_minigames" and e or nil end
 RUNNING.tobs_minigames = true; MGRESULT = true
 local skills = #exportCalls
-handlers["TOB_fh:outcome"](true, "B1")
+handlers["tobsbank:outcome"](true, "B1")
 check("Paleto plays GTA's hacking laptop", lastStart() ~= nil and lastStart().data == "hack")
 check("... without tobs_minigames' own animation (the heist plays the laptop scene)", lastStart().opts.animate == false)
 local sc = false
 for i = skills + 1, #exportCalls do if exportCalls[i].fn == "skillCheck" then sc = true end end
-check("won laptop game starts the hack, no skill check on top", not sc and lastServer("TOB_fh:hackStarted")[2] == "B1")
+check("won laptop game starts the hack, no skill check on top", not sc and lastServer("tobsbank:hackStarted")[2] == "B1")
 MGRESULT = false
-handlers["TOB_fh:outcome"](true, "B1")
-check("lost laptop game fails the hack", lastServer("TOB_fh:hackFailed")[2] == "B1")
+handlers["tobsbank:outcome"](true, "B1")
+check("lost laptop game fails the hack", lastServer("tobsbank:hackFailed")[2] == "B1")
 MGRESULT = nil; SKILL = true
 local calls = #exportCalls
-handlers["TOB_fh:outcome"](true, "B1")
+handlers["tobsbank:outcome"](true, "B1")
 local usedSkill = false
 for i = calls + 1, #exportCalls do if exportCalls[i].fn == "skillCheck" then usedSkill = true end end
-check("GTA screen doesn't load: the ox_lib skill check instead", usedSkill and lastServer("TOB_fh:hackStarted")[2] == "B1")
+check("GTA screen doesn't load: the ox_lib skill check instead", usedSkill and lastServer("tobsbank:hackStarted")[2] == "B1")
 RUNNING.tobs_minigames = nil
 calls = #exportCalls
-handlers["TOB_fh:outcome"](true, "B1")
+handlers["tobsbank:outcome"](true, "B1")
 local startedMg = false
 for i = calls + 1, #exportCalls do if exportCalls[i].res == "tobs_minigames" then startedMg = true end end
 check("without tobs_minigames: the normal minigame", not startedMg and lastExport("skillCheck").data == TOB.MinigameDifficulty)
 TOB.Banks.F1.minigames = {hack = {"hard"}}
-handlers["TOB_fh:outcome"](true, "F1")
+handlers["tobsbank:outcome"](true, "F1")
 check("a bank's own ox_lib difficulties", lastExport("skillCheck").data[1] == "hard")
 TOB.Banks.F1.minigames = {hack = function() error("broken") end}
-local okRun = pcall(handlers["TOB_fh:outcome"], true, "F1")
-check("a broken function on a bank doesn't stop the heist", okRun and lastServer("TOB_fh:hackStarted")[2] == "F1" and printed[#printed]:find("Minigame error") ~= nil)
+local okRun = pcall(handlers["tobsbank:outcome"], true, "F1")
+check("a broken function on a bank doesn't stop the heist", okRun and lastServer("tobsbank:hackStarted")[2] == "F1" and printed[#printed]:find("Minigame error") ~= nil)
 TOB.Banks.F1.minigames = nil
 -- drilling a deposit box
 RUNNING.tobs_minigames = true; MGRESULT = true
 calls = #exportCalls
 local drillNetworked
 function PlaySoundFromEntity(_, name, _, _, isNetwork) if name == "Drill" then drillNetworked = isNetwork end end
-handlers["TOB_fh:drillResult"]("B1", 1, true)
+handlers["tobsbank:drillResult"]("B1", 1, true)
 check("the driller's drill sound isn't networked (the others get the server's bank sound)", drillNetworked == false)
 local bar = false
 for i = calls + 1, #exportCalls do
     if exportCalls[i].fn == "progressBar" then bar = true end
 end
-check("Paleto box: GTA's drill replaces the progress bar", lastStart().data == "drill" and not bar and lastServer("TOB_fh:drillDone")[4] == true)
+check("Paleto box: GTA's drill replaces the progress bar", lastStart().data == "drill" and not bar and lastServer("tobsbank:drillDone")[4] == true)
 MGRESULT = false
-handlers["TOB_fh:drillResult"]("B1", 1, true)
-check("lost drill game: box not opened", lastServer("TOB_fh:drillDone")[4] == false and notes[#notes] == L("drill_failed"))
+handlers["tobsbank:drillResult"]("B1", 1, true)
+check("lost drill game: box not opened", lastServer("tobsbank:drillDone")[4] == false and notes[#notes] == L("drill_failed"))
 RUNNING.tobs_minigames = nil
 calls = #exportCalls
-handlers["TOB_fh:drillResult"]("B1", 1, true)
+handlers["tobsbank:drillResult"]("B1", 1, true)
 local skill, progress = false, false
 for i = calls + 1, #exportCalls do
     if exportCalls[i].fn == "skillCheck" then skill = true end
     if exportCalls[i].fn == "progressBar" then progress = true end
 end
-check("without tobs_minigames: skill check, then the progress bar", skill and progress and lastServer("TOB_fh:drillDone")[4] == true)
+check("without tobs_minigames: skill check, then the progress bar", skill and progress and lastServer("tobsbank:drillDone")[4] == true)
 -- sounds from the server
 handlers["tobs_bankrobbery:bankSound"]("B1", "drill_on", 1, 3, 40.0)
 check("far from the bank: no drill sound", (CALLS.PlaySoundFromCoord or 0) == 0)

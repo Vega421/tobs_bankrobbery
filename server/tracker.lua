@@ -22,7 +22,7 @@ function StartTracker(src, bank)
         Trackers[src] = {ends = now + duration, nextUpdate = 0}
     end
     if TOB.Tracker.warnRobber then
-        TriggerClientEvent("TOB_fh:trackerWarn", src)
+        TriggerClientEvent("tobsbank:trackerWarn", src)
     end
     Log("GPS tracker", PlayerLabel(src) .. " took a GPS tracker from " .. BankName(bank) .. ".", 3447003)
 end
@@ -30,7 +30,7 @@ end
 function StopTracker(src)
     if Trackers[src] then
         Trackers[src] = nil
-        TriggerClientEvent("TOB_fh:trackerEnd", -1, src)
+        TriggerClientEvent("tobsbank:trackerEnd", -1, src)
     end
 end
 
@@ -58,7 +58,7 @@ function TrackerTick(now)
                 police = police or PoliceOnline()
                 local left = math.ceil((t.ends - now) / 1000)
                 for _, id in ipairs(police) do
-                    TriggerClientEvent("TOB_fh:trackerPos", id, src, coords, left)
+                    TriggerClientEvent("tobsbank:trackerPos", id, src, coords, left)
                 end
             end
         end

@@ -11,6 +11,10 @@ DOCS = "https://vega421.github.io/scripts/tobs-bankrobbery/"
 
 version = sys.argv[1].lstrip("v")
 changelog = open("CHANGELOG.md", encoding="utf-8").read()
+try:  # versions before the numbers restarted at 1.0.0 live in the archive
+    changelog += open("CHANGELOG-tobs_blaine.md", encoding="utf-8").read()
+except FileNotFoundError:
+    pass
 match = re.search(r"^## v?" + re.escape(version) + r"\b.*?\n(.*?)(?=^## |\Z)", changelog, re.S | re.M)
 changes = match.group(1).strip() if match else "See the [changelog](https://github.com/{}/blob/main/CHANGELOG.md).".format(REPO)
 

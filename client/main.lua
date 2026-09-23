@@ -14,8 +14,8 @@ Citizen.CreateThread(function()
 end)
 
 -- Bank alarm (banks with alarm = "..." in the config)
-RegisterNetEvent("TOB_fh:alarm")
-AddEventHandler("TOB_fh:alarm", function(bank, on)
+RegisterNetEvent("tobsbank:alarm")
+AddEventHandler("tobsbank:alarm", function(bank, on)
     local b = TOB.Banks[bank]
     if b == nil or b.alarm == nil then return end
     if on then
@@ -28,8 +28,8 @@ AddEventHandler("TOB_fh:alarm", function(bank, on)
 end)
 
 -- Thermite sparks, shown to everyone near the vault
-RegisterNetEvent("TOB_fh:thermiteFx_c")
-AddEventHandler("TOB_fh:thermiteFx_c", function(coords, duration)
+RegisterNetEvent("tobsbank:thermiteFx_c")
+AddEventHandler("tobsbank:thermiteFx_c", function(coords, duration)
     if #(GetEntityCoords(PlayerPedId()) - coords) > 80.0 then return end
     RequestNamedPtfxAsset("scr_ornate_heist")
     local timeout = GetGameTimer() + 5000
@@ -64,7 +64,7 @@ end)
 -- STARTUP --
 
 Bridge.Init(function()
-    Bridge.TriggerCallback("TOB_fh:getBanks", function(banks, doors, running)
+    Bridge.TriggerCallback("tobsbank:getBanks", function(banks, doors, running)
         TOB.Banks = banks
         Doors = doors
         for k, _ in pairs(TOB.Banks) do
@@ -104,7 +104,7 @@ Citizen.CreateThread(function()
                 if not v.onaction and not Check[k] and dst <= PromptRange(1.0) then
                     sleep = 0
                     if Prompt(start, L("start_heist"), dst, 1.0) then
-                        TriggerServerEvent("TOB_fh:startcheck", k)
+                        TriggerServerEvent("tobsbank:startcheck", k)
                     end
                 end
                 if AwaitingGate[k] then
@@ -151,7 +151,7 @@ function RegisterTargets()
                     return not IsPoliceJob() and not TOB.Banks[k].onaction and not Check[k]
                 end,
                 onSelect = function()
-                    TriggerServerEvent("TOB_fh:startcheck", k)
+                    TriggerServerEvent("tobsbank:startcheck", k)
                 end
             }}
         })
