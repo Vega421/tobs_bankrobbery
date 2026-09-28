@@ -41,7 +41,7 @@ of crashing.
 
 | | |
 | --- | --- |
-| **Players** | `GetPlayer`, `GetIdentifier`, `GetJob`, `IsPolice`, `CountPolice`, `GetPlayersByJob` |
+| **Players** | `GetPlayer`, `GetIdentifier`, `IsLoaded`, `IsDead`, `GetJob`, `IsPolice`, `CountPolice`, `GetPlayersByJob` |
 | **Items** | `GetItemCount`, `HasItem`, `AddItem`, `RemoveItem`, `CanCarry` |
 | **Money** | `AddMoney`, `RemoveMoney`, `GetMoney` — accounts `"cash"`, `"bank"`, `"black"` |
 | **Database** | `GetPerson`, `SearchPeople`, `GetVehicles`, `GetVehicleByPlate`, `GetLicences`, `SetLicence`, `GetPhoneNumber` |
