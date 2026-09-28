@@ -74,6 +74,3 @@ each), but haven't been played on a live server yet: please report anything that
 - The gold and diamond trolleys show their own label with ox_target
 
 **Updating from tobs_blaine:** delete the old `tobs_blaine` folder, change `ensure tobs_blaine` to `ensure tobs_bankrobbery` in `server.cfg`, then copy your settings into the new `config/config.lua`, `config/config_server.lua` and `config/banks.lua` (custom banks go there). Trolleys now pay `TOB.TrolleyCash` over `TOB.GrabTime` instead of the old pile settings. The admin command is still `/tobreset`.
-
-**Older history:** the tobs_blaine versions are in
-[CHANGELOG-tobs_blaine.md](CHANGELOG-tobs_blaine.md).
