@@ -8,7 +8,7 @@ Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
 **The first release of tobs_bankrobbery as its own script.** It grew out of tobs_blaine and has been
 rewritten: one resource for Qbox, ESX and QBCore, the server runs the whole heist, and the framework
-code is the shared [tobs_bridge](https://github.com/Vega421/tobs_bridge).
+code is shared with the other tobs_ scripts (the `bridge/` folder).
 
 Tested in game on Qbox. QBCore and ESX are covered by the automated tests (a fake framework for
 each), but haven't been played on a live server yet: please report anything that doesn't work there.
@@ -18,7 +18,7 @@ each), but haven't been played on a live server yet: please report anything that
 - **No vRP.** vRP servers can keep using [tobs_blaine](https://github.com/Vega421/tobs_blaine) 1.5.0 (archived)
 - `TOB.PoliceJob` can be a list of jobs, for example `{"police", "sheriff"}`; `TOB.Notify = "framework"` uses the framework's notifications
 - `/bankcoords` prints your position ready to paste into a new bank (`TOB.CoordsCommand`), and the `install/` folder has the items for every inventory
-- The framework bridge is now the shared [tobs_bridge](https://github.com/Vega421/tobs_bridge): the same `Bridge` code as the other tobs_ scripts, with the database queries and ox_lib helpers included. Settings are unchanged (`TOB.Framework`, `TOB.PoliceJob`, `TOB.PoliceOnDuty`); `TOB.PoliceGroup` and `install/vrp.lua` are gone
+- The framework bridge (`bridge/`) is now the same code as in the other tobs_ scripts, with the database queries and ox_lib helpers included. Settings are unchanged (`TOB.Framework`, `TOB.PoliceJob`, `TOB.PoliceOnDuty`); `TOB.PoliceGroup` and `install/vrp.lua` are gone
 
 **Minigames**
 - **Minigames per bank** with [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional): set `minigames = {hack = ..., drill = ...}` on a bank in `config/banks.lua`. Any of its games works, with a difficulty: `{type = "thermite", difficulty = "hard"}`
