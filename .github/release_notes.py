@@ -1,6 +1,6 @@
 """Builds the GitHub release notes for one version from CHANGELOG.md.
 
-Usage: python3 .github/release_notes.py 2.0.0 > notes.md
+Usage: python3 .github/release_notes.py 1.0.0 > notes.md
 """
 import re
 import sys

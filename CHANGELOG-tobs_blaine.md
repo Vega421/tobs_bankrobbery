@@ -1,24 +1,8 @@
-# Changelog before 1.0.0 (tobs_blaine and tobs_bankrobbery 2.x)
+# Changelog before 1.0.0 (tobs_blaine)
 
-The history of this script before the versions were restarted at 1.0.0 on 2026-09-23. 2.0.0 is the
-last version with **vRP** support: vRP servers should stay on it.
-
-## 2.0.0 · 2026-09-21
-
-**tobs_blaine is now tobs_bankrobbery: one resource for every framework.** The ESX, vRP and Qbox versions are merged; the heist is the same as 1.5.0.
-
-- **Qbox, ESX, QBCore and vRP in one download.** The framework is detected automatically (`TOB.Framework = "auto"`)
-- **Qbox and QBCore support:** police must be on duty (`TOB.PoliceOnDuty`), items through ox_inventory or qb-inventory, cash through the framework
-- `TOB.PoliceJob` can be a list of jobs, for example `{"police", "sheriff"}`
-- `/bankcoords` prints your position ready to paste into `TOB.Banks` when adding a bank (`TOB.CoordsCommand`)
-- Item files for every inventory in the `install/` folder
-- `TOB.blackmoney = "auto"`: `dirty_money` on vRP, `black_money` on QBCore and Qbox (ESX still uses the `black_money` account)
-- `TOB.Notify = "framework"` uses ESX, QBCore or Qbox notifications (`"esx"` still works)
-- Tests for every framework bridge
-
-**Updating from tobs_blaine:** delete the old `tobs_blaine` folder, change `ensure tobs_blaine` to `ensure tobs_bankrobbery` in `server.cfg`, and copy your settings into the new `config/` files. vRP servers: `TOB.Locale` is now `"en"` by default (set `"da"` for Danish) and `TOB.VaultCloseDelay` is 30. The admin command is still `/tobreset`.
-
-History before 2.0.0 is from tobs_blaine (the ESX and vRP versions shared the same code and version numbers from 1.3.0).
+The history of this script as **tobs_blaine**, before it became tobs_bankrobbery 1.0.0. The ESX and
+vRP versions shared the same code and version numbers from 1.3.0. 1.5.0 is the last version with
+**vRP** support ([tobs_blaine](https://github.com/Vega421/tobs_blaine), archived).
 
 ## 1.5.0 · 2026-09-21
 

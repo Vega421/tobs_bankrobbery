@@ -6,19 +6,18 @@ Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
 ## 1.0.0 · 2026-09-28
 
-**The first release of tobs_bankrobbery as its own script.** It grew out of tobs_blaine (and the 2.x
-versions that merged the framework copies), and it's been rewritten enough that the version numbers
-start again at 1.0.0: the server runs the whole heist, the framework code is the shared
-[tobs_bridge](https://github.com/Vega421/tobs_bridge), and vRP is gone.
-
-Servers on 2.0.0 can update by replacing the folder (the settings are the same); the number going
-down is deliberate. vRP servers should stay on 2.0.0.
+**The first release of tobs_bankrobbery as its own script.** It grew out of tobs_blaine and has been
+rewritten: one resource for Qbox, ESX and QBCore, the server runs the whole heist, and the framework
+code is the shared [tobs_bridge](https://github.com/Vega421/tobs_bridge).
 
 Tested in game on Qbox. QBCore and ESX are covered by the automated tests (a fake framework for
 each), but haven't been played on a live server yet: please report anything that doesn't work there.
 
 **Frameworks**
-- **vRP support is removed.** The resource is now Qbox, QBCore and ESX only. vRP servers should stay on 2.0.0
+- **Qbox, ESX and QBCore in one resource**, detected automatically (`TOB.Framework = "auto"`). Qbox and QBCore count only on-duty police (`TOB.PoliceOnDuty`); items go through ox_inventory or qb-inventory
+- **No vRP.** vRP servers can keep using [tobs_blaine](https://github.com/Vega421/tobs_blaine) 1.5.0 (archived)
+- `TOB.PoliceJob` can be a list of jobs, for example `{"police", "sheriff"}`; `TOB.Notify = "framework"` uses the framework's notifications
+- `/bankcoords` prints your position ready to paste into a new bank (`TOB.CoordsCommand`), and the `install/` folder has the items for every inventory
 - The framework bridge is now the shared [tobs_bridge](https://github.com/Vega421/tobs_bridge): the same `Bridge` code as the other tobs_ scripts, with the database queries and ox_lib helpers included. Settings are unchanged (`TOB.Framework`, `TOB.PoliceJob`, `TOB.PoliceOnDuty`); `TOB.PoliceGroup` and `install/vrp.lua` are gone
 
 **Minigames**
@@ -74,7 +73,7 @@ each), but haven't been played on a live server yet: please report anything that
 - A trolley taken by two players at once no longer flags the second one as a cheater
 - The gold and diamond trolleys show their own label with ox_target
 
-**Updating from 2.0.0:** replace the whole folder, then copy your settings into the new `config/config.lua` (new: `TOB.TrolleyCash`, `TOB.GrabTime`, `TOB.HackMinigame`, `TOB.Prompts`, `TOB.Dispatch`, `TOB.MarkedBills`, `TOB.Tracker`, `TOB.DyePack`, `TOB.TrolleySpawn`) and `config/config_server.lua` (new: `SV.DispatchAlert`). Custom banks go in the new `config/banks.lua`.
+**Updating from tobs_blaine:** delete the old `tobs_blaine` folder, change `ensure tobs_blaine` to `ensure tobs_bankrobbery` in `server.cfg`, then copy your settings into the new `config/config.lua`, `config/config_server.lua` and `config/banks.lua` (custom banks go there). Trolleys now pay `TOB.TrolleyCash` over `TOB.GrabTime` instead of the old pile settings. The admin command is still `/tobreset`.
 
-**Older history:** the 2.x and tobs_blaine versions are in
+**Older history:** the tobs_blaine versions are in
 [CHANGELOG-tobs_blaine.md](CHANGELOG-tobs_blaine.md).
