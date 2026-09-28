@@ -4,7 +4,7 @@ All notable changes to tobs_bankrobbery. Each version is also a [GitHub release]
 
 Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
-## 1.0.0 · 2026-09-23
+## 1.0.0 · 2026-09-28
 
 **The first release of tobs_bankrobbery as its own script.** It grew out of tobs_blaine (and the 2.x
 versions that merged the framework copies), and it's been rewritten enough that the version numbers
@@ -13,6 +13,9 @@ start again at 1.0.0: the server runs the whole heist, the framework code is the
 
 Servers on 2.0.0 can update by replacing the folder (the settings are the same); the number going
 down is deliberate. vRP servers should stay on 2.0.0.
+
+Tested in game on Qbox. QBCore and ESX are covered by the automated tests (a fake framework for
+each), but haven't been played on a live server yet: please report anything that doesn't work there.
 
 **Frameworks**
 - **vRP support is removed.** The resource is now Qbox, QBCore and ESX only. vRP servers should stay on 2.0.0
