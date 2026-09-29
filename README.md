@@ -5,7 +5,6 @@
 **Paleto and Fleeca bank heists for FiveM: Qbox, ESX and QBCore in one resource**
 
 [![Release](https://img.shields.io/github/v/release/Vega421/tobs_bankrobbery?style=flat-square&color=ff6b2c&label=release)](https://github.com/Vega421/tobs_bankrobbery/releases/latest)
-[![Tests](https://img.shields.io/github/actions/workflow/status/Vega421/tobs_bankrobbery/tests.yml?style=flat-square&label=tests)](https://github.com/Vega421/tobs_bankrobbery/actions/workflows/tests.yml)
 [![License](https://img.shields.io/github/license/Vega421/tobs_bankrobbery?style=flat-square)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-read-ff6b2c?style=flat-square)](https://vega421.github.io/scripts/tobs-bankrobbery/)
 
@@ -45,17 +44,11 @@ Hack the security panel, open the vault and grab the cash from three trolleys be
 
 See the [installation guide](https://vega421.github.io/scripts/tobs-bankrobbery/installation/) for details.
 
-**Testing on a server:** [TESTING.md](TESTING.md) is a checklist: the heist itself, then a short list per framework (Qbox, QBCore's three inventories, ESX's black money account).
-
 **Requires:** one of qbx_core, es_extended or qb-core · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) (optional) · [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional)
 
 ## Development
 
-Framework code lives only in `bridge/<framework>/`; everything else is shared. The server runs the heist (`server/heist.lua`); the client plays the animations and asks the server. Run the tests with Lua 5.4 from the repo root:
-
-```bash
-lua5.4 tests/server_test.lua && lua5.4 tests/bridge_test.lua && lua5.4 tests/client_test.lua && lua5.4 tests/minigames_test.lua && lua5.4 tests/tools_test.lua
-```
+Framework code lives only in `bridge/<framework>/`; everything else is shared. The server runs the heist (`server/heist.lua`); the client plays the animations and asks the server.
 
 ## Credits and license
 
