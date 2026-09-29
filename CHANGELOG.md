@@ -15,7 +15,6 @@ each), but haven't been played on a live server yet: please report anything that
 
 **Frameworks**
 - **Qbox, ESX and QBCore in one resource**, detected automatically (`TOB.Framework = "auto"`). Qbox and QBCore count only on-duty police (`TOB.PoliceOnDuty`); items go through ox_inventory or qb-inventory
-- **No vRP.** vRP servers can keep using [tobs_blaine](https://github.com/Vega421/tobs_blaine) 1.5.0 (archived)
 - `TOB.PoliceJob` can be a list of jobs, for example `{"police", "sheriff"}`; `TOB.Notify = "framework"` uses the framework's notifications
 - `/bankcoords` prints your position ready to paste into a new bank (`TOB.CoordsCommand`), and the `install/` folder has the items for every inventory
 - The framework bridge (`bridge/`) is now the same code as in the other tobs_ scripts, with the database queries and ox_lib helpers included. Settings are unchanged (`TOB.Framework`, `TOB.PoliceJob`, `TOB.PoliceOnDuty`); `TOB.PoliceGroup` and `install/vrp.lua` are gone
