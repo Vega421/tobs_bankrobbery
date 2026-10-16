@@ -6,6 +6,19 @@
 local Trolleys = {Loot1 = "trolley1", Loot2 = "trolley2", Loot3 = "trolley3"}
 local GRAB_GRACE = 15000 -- ms after a grab could have finished before it's dropped
 local MIN_ASK_GAP = 200  -- ms between two payout requests from one player
+local FULL_SLACK = 1500  -- ms: a grab the player ran to its end (grabDone) this close to TOB.GrabTime pays the whole trolley
+
+-- An item's label for the loot counter ("Gold Bar"), from ox_inventory; else its name
+local labels = {}
+local function ItemLabel(name)
+    if labels[name] == nil then
+        local ok, item = pcall(function()
+            return GetResourceState("ox_inventory") == "started" and exports.ox_inventory:Items(name) or nil
+        end)
+        labels[name] = (ok and type(item) == "table" and item.label) or name
+    end
+    return labels[name]
+end
 
 local function GrabMs()
     return (TOB.GrabTime or 37) * 1000
@@ -36,9 +49,17 @@ function AnyGrab(bank)
 end
 
 -- Pays what the player has earned so far on their trolley. With marked bills nothing is paid until
--- the grab ends (Finish); the loot counter still counts up.
-local function Pay(src, g)
-    local frac = math.min(1, (GetGameTimer() - g.started) / GrabMs())
+-- the grab ends (Finish); the loot counter still counts up. done = the player stopped grabbing: a grab
+-- that ran (almost) to its end pays the whole trolley. Once the trolley is empty the player is told,
+-- so the grab animation stops with the money (tobsbank:trolleyEmpty).
+local function Pay(src, g, done)
+    local spent = GetGameTimer() - g.started
+    local frac = math.min(1, spent / GrabMs())
+    if done and spent >= GrabMs() - FULL_SLACK then frac = 1 end
+    if frac >= 1 and not done and not g.emptySent then
+        g.emptySent = true
+        TriggerClientEvent("tobsbank:trolleyEmpty", src)
+    end
     local owedWorth = math.floor(g.worth * frac)
     local worth, cash, items = 0, 0, 0
 
@@ -85,13 +106,16 @@ local function Pay(src, g)
     g.paidWorth = owedWorth
     local mine = RecordPayout(g.bank, src, worth, cash, items, g.item)
     if TOB.LootCounter then
-        TriggerClientEvent("tobsbank:grabbed", src, worth, Money(mine))
+        -- items (gold bars, diamonds): the counter counts them, not dollars
+        TriggerClientEvent("tobsbank:grabbed", src, worth, Money(mine), items, items > 0 and ItemLabel(g.item) or nil)
     end
 end
 
 -- The grab is over: marked bills are handed out, and the dye pack or GPS tracker goes off
 local function Finish(src, g)
     Looting[src] = nil
+    -- everyone's game keeps the grabbed trolley looking empty (trolleys without an empty model)
+    TriggerClientEvent("tobsbank:trolleyDone", -1, g.bank, "Loot" .. g.slot:sub(-1))
     if g.marked and g.paidWorth > 0 and not TestPayoutBlocked(g.bank) then
         if Bridge.AddItem(src, TOB.MarkedBillsItem or "markedbills", 1, {worth = g.paidWorth}) then
             RecordPayout(g.bank, src, g.paidWorth, 0, 1, TOB.MarkedBillsItem or "markedbills")
@@ -131,16 +155,21 @@ AddEventHandler("tobsbank:lootup", function(bank, loot)
     local slot = Trolleys[loot]
     local h = Heists[bank]
 
-    if h == nil or slot == nil or Bridge.IsPolice(_source) then return end
+    -- Every request gets an answer: the player's game waits for one before it can loot again
     local function Deny(reason)
         TriggerClientEvent("tobsbank:lootResult", _source, bank, loot, false, reason)
     end
+    if h == nil or slot == nil or Bridge.IsPolice(_source) then return Deny() end
     if Looting[_source] ~= nil then return Deny() end
     if h.looted[slot] then return Deny("trolley_taken") end
     if h.stage ~= "open" then return Deny() end
-    if not VaultOpen(bank) or (slot == GateTrolley(bank) and not h.gateOpen) then
+    if not VaultOpen(bank) then
         Flag(_source, "Tried to loot a trolley at " .. BankName(bank) .. " before it could be reached.")
         return Deny()
+    end
+    -- a trolley behind the inner gate: the player is told why (before, loot just did nothing)
+    if IsGateTrolley(bank, slot) and not h.gateOpen then
+        return Deny("gate_hint")
     end
     if not IsNear(_source, TOB.Banks[bank][slot], 5.0) then
         Flag(_source, "Tried to loot a trolley at " .. BankName(bank) .. " from far away.")
@@ -160,7 +189,9 @@ AddEventHandler("tobsbank:lootup", function(bank, loot)
         worth = math.floor(worth * (1 - (TOB.DyePack.loss or 0)))
     end
     local item, itemTotal, marked = nil, 0, false
-    if special and special.item and special.item ~= "" then
+    -- A special trolley's item, unless the inventory doesn't have it: then it pays cash, instead of
+    -- "pockets full" and nothing (the health check also names the missing item)
+    if special and special.item and special.item ~= "" and (ItemExists == nil or ItemExists(special.item) ~= false) then
         item, itemTotal = special.item, special.itemCount or 20
     elseif TOB.RewardItem ~= nil and TOB.RewardItem ~= "" then
         item = TOB.RewardItem
@@ -175,6 +206,31 @@ AddEventHandler("tobsbank:lootup", function(bank, loot)
                         marked = marked, dye = dye, dirty = dye and TOB.DyePack.dirty == true}
     TriggerClientEvent("tobsbank:lootResult", _source, bank, loot, true)
     TriggerClientEvent("tobsbank:lootup_c", -1, bank, loot)
+end)
+
+-- Sent when the player's game couldn't start the grab (the trolley wasn't there, or someone was
+-- already emptying it). The trolley is free again and nothing is paid; once the grab has started
+-- (tobsbank:grabStarted) or paid anything, it can't be handed back.
+RegisterServerEvent("tobsbank:grabFailed")
+AddEventHandler("tobsbank:grabFailed", function()
+    local g = Looting[source]
+    if g == nil or g.clockStarted or g.paidWorth > 0 then return end
+    Looting[source] = nil
+    local h = Heists[g.bank]
+    if h ~= nil then h.looted[g.slot] = nil end
+    TriggerClientEvent("tobsbank:lootFree", -1, g.bank, "Loot" .. g.slot:sub(-1))
+end)
+
+-- Sent when the grab animation starts. The trolley's clock starts here rather than when the server
+-- said yes, because the intro animation and taking control of the trolley come first: otherwise the
+-- money ran out seconds before the animation did. Only the first one counts; sending it late only
+-- makes the trolley pay later, and without it the clock runs from the server's yes.
+RegisterServerEvent("tobsbank:grabStarted")
+AddEventHandler("tobsbank:grabStarted", function()
+    local g = Looting[source]
+    if g == nil or g.clockStarted then return end
+    g.clockStarted = true
+    g.started = GetGameTimer()
 end)
 
 -- Sent each time a pile lands in the bag (the grab animation's RELEASE_CASH_DESTROY event)
@@ -205,7 +261,7 @@ AddEventHandler("tobsbank:grabDone", function()
 
     if g == nil then return end
     if IsNear(_source, TOB.Banks[g.bank][g.slot], 6.0) then
-        Pay(_source, g)
+        Pay(_source, g, true)
     end
     Finish(_source, g)
 end)

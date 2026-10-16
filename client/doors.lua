@@ -130,7 +130,10 @@ AddEventHandler("tobsbank:toggleVault", function(key, state)
     end
     DoorBusy = true
     Doors[key][2].state = nil
-    local step = state and 0.10 or -0.10
+    -- The door turns TOB.Banks[key].vaultTurn degrees to open (-90 by default, the Fleeca doors) and
+    -- back to close; Paleto's is hung the other way (+90), or it swung into the vault (Qbox test)
+    local turn = tonumber(TOB.Banks[key].vaultTurn) or -90
+    local step = (state and -turn or turn) / 900
     for _ = 1, 900 do
         SetEntityHeading(obj, GetEntityHeading(obj) + step)
         Citizen.Wait(10)

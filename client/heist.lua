@@ -24,63 +24,71 @@ local function Dispatch(bank)
     end
 end
 
--- LAPTOP HACK (TOB.LaptopHack): the Pacific Standard hacking animation at the panel.
+-- LAPTOP HACK (TOB.LaptopHack): the Pacific Standard hacking animation at a panel (the start panel,
+-- and the inner gate's panel). `spot` is the panel's animcoords (floor level, with a heading).
 -- Returns what LaptopStop needs, or nil if the animation couldn't load.
 local HACK_DICT = "anim@heists@ornate_bank@hack"
-function LaptopStart(bank)
+function LaptopStart(spot)
+    if not spot then return nil end
     local bagHash, laptopHash, cardHash = GetHashKey("hei_p_m_bag_var22_arm_s"), GetHashKey("hei_prop_hst_laptop"), GetHashKey("hei_prop_heist_card_hack_02")
     LoadDict(HACK_DICT)
     if not (HasAnimDictLoaded(HACK_DICT) and LoadModel(bagHash) and LoadModel(laptopHash) and LoadModel(cardHash)) then
         return nil
     end
     local ped = PlayerPedId()
-    local spot = TOB.Banks[bank].doors.startloc.animcoords
-    -- animcoords are floor level; the scene wants standing height (at floor level the player ended up
-    -- under the floor in game)
-    local origin = vector3(spot.x, spot.y, spot.z + (tonumber(TOB.LaptopSceneOffset) or 1.0))
+    -- The scene sits TOB.LaptopSceneOffset above the floor and TOB.LaptopSceneForward in front of the
+    -- spot (towards the panel), so the player isn't pulled backwards when it starts (Qbox test).
+    local heading = math.rad(spot.h)
+    local forward = tonumber(TOB.LaptopSceneForward) or 0.45
+    local origin = vector3(spot.x - math.sin(heading) * forward, spot.y + math.cos(heading) * forward,
+        spot.z + (tonumber(TOB.LaptopSceneOffset) or 1.5))
     local rot = vector3(0.0, 0.0, spot.h)
     local here = GetEntityCoords(ped)
+    -- Networked props, so everyone near the bank sees the bag and laptop
     local props = {
         bag = CreateObject(bagHash, here.x, here.y, here.z, true, true, false),
         laptop = CreateObject(laptopHash, here.x, here.y, here.z, true, true, false),
         card = CreateObject(cardHash, here.x, here.y, here.z, true, true, false),
     }
     local function Scene(part, looped)
-        local scene = NetworkCreateSynchronisedScene(origin.x, origin.y, origin.z, rot.x, rot.y, rot.z, 2, false, looped, 1065353216, 0, 1.3)
-        NetworkAddPedToSynchronisedScene(ped, scene, HACK_DICT, part, 1.5, -4.0, 1, 16, 1148846080, 0)
-        NetworkAddEntityToSynchronisedScene(props.bag, scene, HACK_DICT, part .. "_bag", 4.0, -8.0, 1)
-        NetworkAddEntityToSynchronisedScene(props.laptop, scene, HACK_DICT, part .. "_laptop", 4.0, -8.0, 1)
-        NetworkAddEntityToSynchronisedScene(props.card, scene, HACK_DICT, part .. "_card", 4.0, -8.0, 1)
+        local scene = NetworkCreateSynchronisedScene(origin.x, origin.y, origin.z, rot.x, rot.y, rot.z, 2, false, looped, 1065353216, 0, 1.0)
+        -- the ped is held tightly to the scene; bag and laptop stay in it
+        NetworkAddPedToSynchronisedScene(ped, scene, HACK_DICT, part, 8.0, -8.0, 1, 16, 2.0, 0)
+        NetworkAddEntityToSynchronisedScene(props.bag, scene, HACK_DICT, part .. "_bag", 1.0, 0.0, 1)
+        NetworkAddEntityToSynchronisedScene(props.laptop, scene, HACK_DICT, part .. "_laptop", 1.0, 0.0, 1)
         return scene
     end
+    -- the access card stays in the hand instead of following the scene
+    AttachEntityToEntity(props.card, ped, GetPedBoneIndex(ped, 60309), 0.1, 0.02, 0.0, 10.0, 175.0, 0.0, true, true, false, true, 1, true)
     SetPedComponentVariation(ped, 5, 0, 0, 0)
+    -- other players can't push the robber out of the scene mid-hack
+    SetEntityCollision(ped, false, false)
+    FreezeEntityPosition(ped, true)
     NetworkStartSynchronisedScene(Scene("hack_enter", false))
     Citizen.Wait(6300)
     NetworkStartSynchronisedScene(Scene("hack_loop", true))
-    return {props = props, standing = here, exit = function() return Scene("hack_exit", false) end}
+    return {props = props, standing = here}
 end
 
 function LaptopStop(ctx)
     if ctx == nil then return end
-    local scene = ctx.exit()
-    NetworkStartSynchronisedScene(scene)
-    Citizen.Wait(4600)
-    NetworkStopSynchronisedScene(scene)
-    for _, obj in pairs(ctx.props) do DeleteObject(obj) end
     local ped = PlayerPedId()
+    -- The exit animation isn't played: starting it moved the player (Qbox test). The loop keeps
+    -- running for the exit's length, then the props go and the player is released where they are.
+    Citizen.Wait(4600)
+    for _, obj in pairs(ctx.props) do
+        if DoesEntityExist(obj) then DeleteObject(obj) end
+    end
     SetPedComponentVariation(ped, 5, 45, 0, 0)
     ClearPedTasks(ped)
-    -- never leave the player lower than where they stood before the scene (under the floor)
-    local now = GetEntityCoords(ped)
-    if ctx.standing and now.z < ctx.standing.z - 0.5 then
-        SetEntityCoords(ped, ctx.standing.x, ctx.standing.y, ctx.standing.z, false, false, false, false)
-    end
+    SetEntityCollision(ped, true, true)
+    FreezeEntityPosition(ped, false)
 end
 
--- Puts the player on a spot from the bank config: animcoords are floor level, a ped is placed by its
--- middle, so it goes 1 m higher (at floor level it would sink into the floor)
+-- Puts the player on a spot from the bank config (animcoords are floor level; Qbox test: placing the
+-- ped 1 m higher left them floating, at floor level they stand right)
 local function StandAt(ped, spot)
-    SetEntityCoords(ped, spot.x, spot.y, spot.z + 1.0, false, false, false, false)
+    SetEntityCoords(ped, spot.x, spot.y, spot.z, false, false, false, false)
     SetEntityHeading(ped, spot.h)
 end
 
@@ -162,7 +170,7 @@ function StartHeist(bank)
     DisableInput = false
     Citizen.Wait(1000)
 
-    local laptop = TOB.LaptopHack and LaptopStart(bank) or nil
+    local laptop = TOB.LaptopHack and LaptopStart(data.doors.startloc.animcoords) or nil
     -- the bank's own minigame (tobs_minigames), else the normal one (client/minigames.lua)
     if not BankHackMinigame(bank, function(v) return HackMinigame(bank, v) end) then
         LaptopStop(laptop)
@@ -236,8 +244,12 @@ function SpawnTrolleys(bank, special, looted)
         local models = TrolleyModels(special[slot])
         if not looted[slot] and GetClosestObjectOfType(t.x, t.y, t.z, 1.0, models.model, false, false, false) == 0 then
             LoadModel(models.model)
-            local trolley = CreateObject(models.model, t.x, t.y, t.z, 1, 1, 0)
+            local trolley = CreateObject(models.model, t.x, t.y, t.z, true, true, false)
             SetEntityHeading(trolley, GetEntityHeading(trolley) + t.h)
+            -- A networked mission entity: every player sees it, and it isn't cleaned up by the game
+            -- while the heist runs (Qbox test: other players didn't always see the trolleys)
+            SetNetworkIdCanMigrate(NetworkGetNetworkIdFromEntity(trolley), true)
+            SetEntityAsMissionEntity(trolley, true, true)
         end
     end
 end
@@ -245,6 +257,7 @@ end
 -- The vault opened: the leader spawns the trolleys
 RegisterNetEvent("tobsbank:vaultOpened")
 AddEventHandler("tobsbank:vaultOpened", function(bank, special, looted, serverTrolleys)
+    -- (the loot phase itself starts for everyone, the leader too, through tobsbank:startLoot_c)
     if not serverTrolleys then SpawnTrolleys(bank, special, looted) end -- with OneSync the server spawns them
     if special ~= nil and next(special) ~= nil then
         Notify("inform", L("special_trolley"), 7000)
@@ -273,10 +286,23 @@ AddEventHandler("tobsbank:gateResult", function(bank, ok)
     local ped = PlayerPedId()
     local second = TOB.Banks[bank].doors.secondloc
 
+    -- The gate has its own minigame (the bank's gate setting, else its hack minigame): at the laptop
+    -- like the vault, or another tobs_minigames game with that game's animation. The server starts
+    -- the gate timer only once the minigame is passed (tobsbank:gateHackStarted).
     StandAt(ped, second.animcoords)
-    TaskStartScenarioInPlace(ped, "PROP_HUMAN_ATM", 0, true)
-    Progress(TOB.GateHackTime, L("hacking_gate"))
-    ClearPedTasks(ped)
+    local atLaptop = GateUsesLaptop(bank)
+    local laptop = TOB.LaptopHack and atLaptop and LaptopStart(second.animcoords) or nil
+    if not BankGateMinigame(bank, function(v) return HackMinigame(bank, v) end) then
+        LaptopStop(laptop)
+        -- a failed gate hack doesn't end the heist: the gate is free again for another try
+        TriggerServerEvent("tobsbank:gateHackFailed", bank)
+        AwaitingGate[bank] = true
+        Notify("error", L("gate_hack_failed"))
+        return
+    end
+    TriggerServerEvent("tobsbank:gateHackStarted", bank)
+    Progress(TOB.GateHackTime, L(atLaptop and "hacking_gate" or "opening_gate"))
+    LaptopStop(laptop)
 end)
 
 RegisterNetEvent("tobsbank:gateOpened")

@@ -132,5 +132,5 @@ function Bridge.GetMoney(src, account)
 end
 
 function Bridge.Notify(src, msg, kind)
-    TriggerClientEvent("bridge:notify", src, msg, kind)
+    TriggerClientEvent(BridgeEvent .. "notify", src, msg, kind)
 end

@@ -8,11 +8,14 @@ TOB.door = "v_ilev_cbankvaulgate01"
 -- (stand on each spot and type /bankcoords).
 -- Optional per bank: cash = {min = ..., max = ...} (a full trolley, instead of TOB.TrolleyCash) and
 -- cooldown = seconds (instead of TOB.cooldown).
--- enabled = false hides a bank. doors.secondloc adds an inner gate the robber has to hack (like Fleeca).
--- minigames = {hack = ..., drill = ...} plays tobs_minigames' games at this bank (optional resource:
+-- enabled = false hides a bank. doors.secondloc adds an inner gate the robber has to open (like Fleeca);
+-- gateTrolleys = {"trolley1", "trolley2"} are the trolleys behind it (the default, as in the Fleeca vaults).
+-- minigames = {hack = ..., gate = ..., drill = ...} plays tobs_minigames' games at this bank (optional resource:
 -- https://github.com/Vega421/tobs_minigames): any game name ("hack" = GTA's laptop, "drill" = GTA's drill,
 -- "thermite", "keypad", ...) or {type = "thermite", difficulty = "hard"}. Without tobs_minigames the bank
--- uses TOB.HackMinigame / TOB.DrillMinigame. The games' own settings are in tobs_minigames' config.lua.
+-- uses TOB.HackMinigame / TOB.DrillMinigame. gate is the inner gate's game (no gate = the hack game again;
+-- any game but "hack" plays without the laptop, with tobs_minigames' own animation). The games' own
+-- settings are in tobs_minigames' config.lua.
 -- Fleeca positions are from utkuali/Fleeca-Bank-Heists (GPL-3.0). Deposit box positions (boxes) are from
 -- qbcore-framework/qb-bankrobbery (GPL-3.0).
 TOB.Banks = {
@@ -20,7 +23,10 @@ TOB.Banks = {
         label = "Paleto Bay (Blaine County Savings)",
         enabled = true,
         alarm = "PALETO_BAY_SCORE_ALARM",
-        minigames = {hack = "hack", drill = "drill"}, -- GTA's hacking laptop and drill (with tobs_minigames)
+        minigames = {hack = "hack", gate = "thermite", drill = "drill"}, -- GTA's hacking laptop, thermite at the gate, GTA's drill (with tobs_minigames)
+        gateTrolleys = {"trolley2", "trolley3"}, -- behind Paleto's inner gate; trolley1 is in front of it (Qbox test, 2026-09-30)
+        vaultTurn = 90, -- degrees the vault door turns to open: Paleto's opens the other way than the Fleeca doors (-90)
+        cash = {min = 40000, max = 60000},
         doors = {
             startloc = {x = -105.44020080566, y = 6472.8505859375, z = 31.62672996521, h = 10.240501403809, animcoords = {x = -105.46078491211, y = 6471.5737304688, z = 30.626703262329, h = 43.363094329834}},
             -- the inner gate, hacked after the vault opens (standing in front of it, facing it)
@@ -47,6 +53,7 @@ TOB.Banks = {
     F1 = {
         label = "Fleeca Alta (Hawick Ave)",
         enabled = TOB.FleecaBanks,
+        minigames = {hack = "hack", gate = "thermite", drill = "drill"},
         cash = {min = 30000, max = 50000}, -- Fleeca vaults hold less than Paleto
         gateModel = "v_ilev_gb_vaubar",
         vaultModel = "v_ilev_gb_vauldr",
@@ -70,6 +77,7 @@ TOB.Banks = {
     F2 = {
         label = "Fleeca Legion Square",
         enabled = TOB.FleecaBanks,
+        minigames = {hack = "hack", gate = "thermite", drill = "drill"},
         cash = {min = 30000, max = 50000}, -- Fleeca vaults hold less than Paleto
         gateModel = "v_ilev_gb_vaubar",
         vaultModel = "v_ilev_gb_vauldr",
@@ -93,6 +101,7 @@ TOB.Banks = {
     F3 = {
         label = "Fleeca Rockford Hills",
         enabled = TOB.FleecaBanks,
+        minigames = {hack = "hack", gate = "thermite", drill = "drill"},
         cash = {min = 30000, max = 50000}, -- Fleeca vaults hold less than Paleto
         gateModel = "v_ilev_gb_vaubar",
         vaultModel = "v_ilev_gb_vauldr",
@@ -116,6 +125,7 @@ TOB.Banks = {
     F4 = {
         label = "Fleeca Great Ocean Highway",
         enabled = TOB.FleecaBanks,
+        minigames = {hack = "hack", gate = "thermite", drill = "drill"},
         cash = {min = 30000, max = 50000}, -- Fleeca vaults hold less than Paleto
         gateModel = "v_ilev_gb_vaubar",
         vaultModel = 4231427725, -- this branch has a different vault door
@@ -139,6 +149,7 @@ TOB.Banks = {
     F5 = {
         label = "Fleeca Burton",
         enabled = TOB.FleecaBanks,
+        minigames = {hack = "hack", gate = "thermite", drill = "drill"},
         cash = {min = 30000, max = 50000}, -- Fleeca vaults hold less than Paleto
         gateModel = "v_ilev_gb_vaubar",
         vaultModel = "v_ilev_gb_vauldr",
@@ -162,6 +173,7 @@ TOB.Banks = {
     F6 = {
         label = "Fleeca Harmony (Route 68)",
         enabled = TOB.FleecaBanks,
+        minigames = {hack = "hack", gate = "thermite", drill = "drill"},
         cash = {min = 30000, max = 50000}, -- Fleeca vaults hold less than Paleto
         gateModel = "v_ilev_gb_vaubar",
         vaultModel = "v_ilev_gb_vauldr",

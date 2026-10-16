@@ -4,6 +4,26 @@ All notable changes to tobs_bankrobbery. Each version is also a [GitHub release]
 
 Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
+## 1.0.1 · not released yet
+
+Fixes from playing 1.0.0 on the Qbox test server.
+
+- **Laptop hack:** the player is no longer pulled backwards when the animation starts. The scene sits `TOB.LaptopSceneForward` (new, 0.45 m) in front of the panel and `TOB.LaptopSceneOffset` (now 1.5 m) above the floor, the access card stays in the hand, and other players can't push the robber out of the scene
+- **Inner gate:** hacked like the vault, with the laptop at its panel and the bank's minigame. The gate timer only starts once the minigame is passed; a failed gate minigame frees the gate for another try (with a new gate item) instead of opening it anyway
+- **The inner gate has its own minigame:** `gate` in a bank's `minigames` (`config/banks.lua`), thermite at every bank by default. Any game but GTA's laptop plays without the laptop scene, with tobs_minigames' own animation, and the progress bar says "Opening the gate...". A bank without `gate` plays its hack minigame again, and without tobs_minigames the gate uses the laptop and the normal minigame as before
+- **The inner gate's texts** say "open" instead of "hack" ("Open the inner gate", "Opening the gate failed. Try again."), so they fit any gate minigame
+- **5 new languages:** French (`fr`), Spanish (`es`), Brazilian Portuguese (`pt`), Polish (`pl`) and Italian (`it`), for the heist and the admin tools. 11 in total; set `TOB.Locale` in `config/config.lua`
+- **Grabbing ends with the money:** the trolley's payout starts with the grab animation instead of when the server says yes (the intro and taking control of the trolley came first), and the grab stops as soon as the trolley is paid out. Before, the loot counter stopped while the player kept grabbing from a trolley that still looked full. A grab that runs to its end always pays the whole trolley. The grab animation plays at the speed that empties the trolley in exactly `TOB.GrabTime` (at a fixed speed the trolley was empty early and the grabbing started over), and the money is also asked for by time, so the counter keeps going while the game is alt-tabbed
+- **Looting sometimes did nothing:** the grab only looked for the trolley kind the player's game expected, so when the server had spawned another kind (gold where the game expected cash) it gave up silently and the trolley stayed taken for the rest of the heist. It now finds any trolley at the spot, and a grab that can't start hands the trolley back (nothing paid) so it can be looted again. Loot on a trolley behind a closed inner gate now says "Open the inner gate to reach the trolleys behind it." instead of doing nothing. The server also answers every loot request, and a lost answer no longer blocks looting until a restart
+- **Diamond and gold trolleys:** an emptied diamond trolley came back full (its "empty" model was the full trolley, and GTA has no empty casino diamond trolley): it now stays and is held in the grab animation's last frame, in every player's game (`empty = false`). Gold trolleys showed as cash trolleys (their "empty" model didn't exist): the casino gold trolley is now held empty the same way, and its bars disappear while grabbing
+- **Fleeca inner gate: the right trolleys.** Two trolleys are behind the gate (trolley1 and trolley2) and one is in front of it, but the script locked trolley3 (in front) and left the two behind the bars lootable. Banks now list theirs in `gateTrolleys` (default `{"trolley1", "trolley2"}`; Paleto `{"trolley2", "trolley3"}`, with trolley1 in front); the old `gateTrolley` still works
+- **Paleto's vault door** swung into the vault: it's hung the other way than the Fleeca doors. Each bank sets the direction with `vaultTurn` (degrees to open: -90 by default, Paleto 90)
+- **Gold and diamond trolleys stand behind the inner gate** (one of its trolleys, at random), as the reward for getting through it; at banks without a gate, any trolley
+- **Gold and diamond trolleys pay gold bars and diamonds:** 44 `goldbar` / 44 `diamond` for a full trolley, one per grab of the animation (`item` / `itemCount` in `TOB.SpecialTrolleys`; `item = ""` pays cash as before). Both items are in the `install/` files, and `install/images/` has inventory images for `id_card_f`, `diamond` and `secure_card`. An item the inventory doesn't have is paid as cash instead of nothing. The loot counter counts the items ("12x Gold Bar") and the end message says "You grabbed 20x Gold Bar."
+- **Trolleys** spawned by the leader are networked mission entities, so every player sees them
+- **Standing spots:** players are put on a bank's animcoords at floor level (1 m higher left them floating)
+- **All Fleeca banks** use the hacking laptop and drill minigames (with tobs_minigames), and Paleto has its own cash range (40,000–60,000)
+
 ## 1.0.0 · 2026-09-28
 
 **The first release of tobs_bankrobbery as its own script.** It grew out of tobs_blaine and has been
@@ -15,6 +35,7 @@ each), but haven't been played on a live server yet: please report anything that
 
 **Frameworks**
 - **Qbox, ESX and QBCore in one resource**, detected automatically (`TOB.Framework = "auto"`). Qbox and QBCore count only on-duty police (`TOB.PoliceOnDuty`); items go through ox_inventory or qb-inventory
+- **No vRP.** vRP servers can keep using [tobs_blaine](https://github.com/Vega421/tobs_blaine) 1.5.0 (archived)
 - `TOB.PoliceJob` can be a list of jobs, for example `{"police", "sheriff"}`; `TOB.Notify = "framework"` uses the framework's notifications
 - `/bankcoords` prints your position ready to paste into a new bank (`TOB.CoordsCommand`), and the `install/` folder has the items for every inventory
 - The framework bridge (`bridge/`) is now the same code as in the other tobs_ scripts, with the database queries and ox_lib helpers included. Settings are unchanged (`TOB.Framework`, `TOB.PoliceJob`, `TOB.PoliceOnDuty`); `TOB.PoliceGroup` and `install/vrp.lua` are gone

@@ -10,6 +10,8 @@ LootSpecial = {}    -- [bank] = special trolleys in the running heist, e.g. {tro
 BoxState = {}       -- [bank] = {[box] = "busy" or "opened"}
 TimerEnds = {}      -- [bank] = GetGameTimer() when the shown countdown ends
 GrabbedNow = 0      -- cash grabbed from the current trolley (loot counter)
+GrabbedItems = 0    -- items grabbed from it (gold bars, diamonds), and their label
+GrabbedItemLabel = nil
 Doors = {}
 Ready = false       -- banks loaded from the server
 DisableInput = false
@@ -245,13 +247,15 @@ function LoadDict(dict)
 end
 
 -- Trolley, pile and empty-trolley models for a kind ("gold", "diamond" or nil for cash).
--- Falls back to the cash trolley if a special model isn't in the game files.
+-- Falls back to the cash trolley if a special model isn't in the game files. empty = false (a
+-- trolley GTA has no empty model for, like the casino diamond trolley): empty is nil, and the
+-- trolley is held in the grab animation's last frame instead (HoldTrolleyEmpty in client/loot.lua).
 CASH_TROLLEY = {model = GetHashKey("hei_prop_hei_cash_trolly_01"), pile = GetHashKey("hei_prop_heist_cash_pile"), empty = GetHashKey("hei_prop_hei_cash_trolly_03")}
 function TrolleyModels(kind)
     local s = kind and TOB.SpecialTrolleys and TOB.SpecialTrolleys[kind]
     if not s then return CASH_TROLLEY end
-    local m = {model = ModelHash(s.model), pile = ModelHash(s.pile), empty = ModelHash(s.empty)}
-    if not (IsModelInCdimage(m.model) and IsModelInCdimage(m.pile) and IsModelInCdimage(m.empty)) then
+    local m = {model = ModelHash(s.model), pile = ModelHash(s.pile), empty = s.empty ~= false and ModelHash(s.empty) or nil}
+    if not (IsModelInCdimage(m.model) and IsModelInCdimage(m.pile) and (m.empty == nil or IsModelInCdimage(m.empty))) then
         return CASH_TROLLEY
     end
     return m
@@ -262,7 +266,7 @@ function AllTrolleyModels()
     local list = {CASH_TROLLEY.model, CASH_TROLLEY.empty}
     for _, s in pairs(TOB.SpecialTrolleys or {}) do
         list[#list + 1] = ModelHash(s.model)
-        list[#list + 1] = ModelHash(s.empty)
+        if s.empty ~= false then list[#list + 1] = ModelHash(s.empty) end
     end
     return list
 end

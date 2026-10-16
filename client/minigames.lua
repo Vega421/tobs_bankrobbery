@@ -1,8 +1,12 @@
 -- Per-bank minigames, played with tobs_minigames (https://github.com/Vega421/tobs_minigames) when it
--- is running. A bank in TOB.Banks can pick its own hack and drill minigame:
+-- is running. A bank in TOB.Banks can pick its own hack, gate and drill minigame:
 --
---   minigames = {hack = "hack", drill = "drill"}                              -- GTA's laptop and drill
+--   minigames = {hack = "hack", gate = "thermite", drill = "drill"}           -- GTA's laptop, thermite, GTA's drill
 --   minigames = {hack = "thermite", drill = {type = "drill", difficulty = "hard"}}
+--
+-- gate is the inner gate's minigame (banks with doors.secondloc); without it the gate plays the hack
+-- minigame again. A gate game other than the laptop plays tobs_minigames' own animation instead of
+-- the laptop scene.
 --
 -- Values: any tobs_minigames game ("hack", "drill", "safe", "thermite", "keypad", "wires", "lockpick",
 -- "fingerprint", "hotwire", "lasers", "keyfiling", "tracker"; the old "gta_pc" / "gta_drill" mean
@@ -12,15 +16,17 @@
 -- Without tobs_minigames, or when a GTA screen doesn't load, the resource's own minigame runs instead.
 -- Loaded on the server too (shared script), so the health check uses the same list of games.
 
-local Global = {hack = "HackMinigame", drill = "DrillMinigame"}
+local Global = {hack = "HackMinigame", gate = "HackMinigame", drill = "DrillMinigame"}
 local Games = {hack = true, drill = true, safe = true, thermite = true, keypad = true, wires = true, lockpick = true,
                fingerprint = true, hotwire = true, lasers = true, keyfiling = true, tracker = true}
 local Old = {gta_pc = "hack", gta_drill = "drill"}
 
--- The minigame setting for this bank and step ("hack" or "drill")
+-- The minigame setting for this bank and step ("hack", "gate" or "drill"). A bank without a gate
+-- setting plays its hack minigame at the gate.
 function MinigameSetting(bank, kind)
     local b = TOB.Banks and TOB.Banks[bank]
     if b and type(b.minigames) == "table" and b.minigames[kind] ~= nil then return b.minigames[kind] end
+    if kind == "gate" then return MinigameSetting(bank, "hack") end
     return TOB[Global[kind]]
 end
 
@@ -36,12 +42,13 @@ function MinigameGame(v)
 end
 
 -- Plays a tobs_minigames game: true / false, or nil when it can't (not running, a GTA screen missing).
--- Without tobs_minigames' own animation: the heist already plays the laptop scene and the drill.
-local function Play(name, opts)
+-- Without tobs_minigames' own animation (the heist plays the laptop scene and the drill), unless
+-- animate: then the bank's setting decides ({animate = false} still turns it off).
+local function Play(name, opts, animate)
     if GetResourceState("tobs_minigames") ~= "started" then return nil end
     local o = {}
     for k, v in pairs(opts or {}) do o[k] = v end
-    o.animate = false
+    if not animate then o.animate = false end
     local ok, result = pcall(function() return exports.tobs_minigames:Start(name, o) end)
     if not ok then return nil end
     return result
@@ -66,15 +73,34 @@ end
 -- The bank's hack minigame; returns true/false. tobs_minigames games run here; anything else
 -- ("ox_lib", "none", difficulties, a function) goes to fallback(value), the resource's own minigame
 -- code, which also catches errors in function settings.
-function BankHackMinigame(bank, fallback)
-    local v = MinigameSetting(bank, "hack")
+local function HackStep(bank, kind, fallback, animate)
+    local v = MinigameSetting(bank, kind)
     local name, opts = MinigameGame(v)
     if name then
-        local result = Play(name, opts)
+        local result = Play(name, opts, animate and name ~= "hack")
         if result ~= nil then return result == true end
-        v = Fallback("hack")
+        v = Fallback(kind)
     end
     return fallback(v) == true
+end
+
+function BankHackMinigame(bank, fallback)
+    return HackStep(bank, "hack", fallback, false)
+end
+
+-- True when the inner gate's minigame is played at the laptop: GTA's hacking laptop, or the
+-- resource's own minigame (also when tobs_minigames isn't running). Any other tobs_minigames game
+-- plays its own animation instead.
+function GateUsesLaptop(bank)
+    local name = MinigameGame(MinigameSetting(bank, "gate"))
+    if not name or name == "hack" then return true end
+    return GetResourceState("tobs_minigames") ~= "started"
+end
+
+-- The inner gate's minigame (the bank's gate setting, else its hack setting); returns true/false.
+-- Games other than the laptop animate through tobs_minigames when the laptop scene isn't playing.
+function BankGateMinigame(bank, fallback)
+    return HackStep(bank, "gate", fallback, not GateUsesLaptop(bank))
 end
 
 -- The whole drilling step for a deposit box: call this where the resource runs the drill skill check

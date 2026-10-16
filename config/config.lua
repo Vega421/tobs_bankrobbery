@@ -3,7 +3,8 @@ TOB = {}
 -- Framework: "auto" (detects qbx_core, es_extended or qb-core), "qbox", "esx" or "qb"
 TOB.Framework = "auto"
 
--- Language: "en" (English), "da" (Danish), "de" (German), "sv" (Swedish), "no" (Norwegian) or "nl" (Dutch).
+-- Language: "en" (English), "da" (Danish), "de" (German), "sv" (Swedish), "no" (Norwegian), "nl" (Dutch),
+-- "fr" (French), "es" (Spanish), "pt" (Brazilian Portuguese), "pl" (Polish) or "it" (Italian).
 -- Texts are in locales/locales.lua.
 TOB.Locale = "en"
 
@@ -13,7 +14,7 @@ TOB.PoliceOnDuty = true -- QBCore / Qbox: only count officers who are on duty
 
 -- Heist
 TOB.mincops = 4 -- police needed online to start the heist
-TOB.hacktime = 60000 -- hack duration in milliseconds (60000 = 1 min). Gives police time to arrive
+TOB.hacktime = 20000 -- hack duration in milliseconds (60000 = 1 min). Gives police time to arrive
 TOB.timer = 300 -- seconds after the hack before the doors lock again (also the time limit for TOB.VaultItem)
 TOB.VaultCloseDelay = 30 -- seconds between the last trolley being looted and the vault closing
 TOB.cooldown = 600 -- seconds before a bank can be robbed again (600 = 10 min)
@@ -47,7 +48,7 @@ TOB.GateHackTime = 10000 -- milliseconds the gate hack takes
 
 -- Rewards. A full trolley pays TOB.TrolleyCash; stopping early pays for the time spent grabbing.
 TOB.TrolleyCash = {min = 50000, max = 80000} -- cash in one full trolley (3 trolleys per heist)
-TOB.GrabTime = 37 -- seconds it takes to empty a trolley (the length of the grab animation)
+TOB.GrabTime = 37 -- seconds it takes to empty a trolley (the grab animation is played at the speed that matches)
 TOB.black = false -- true pays dirty money instead of cash (ESX: the black_money account, others: the TOB.blackmoney item)
 TOB.blackmoney = "auto" -- dirty money item: "auto" = "black_money" (QBCore / Qbox)
 TOB.RewardItem = "" -- give this item instead of money, e.g. "markedbills". "" = pay money
@@ -76,10 +77,11 @@ TOB.DyePack = {
 }
 
 -- Animations and sound
-TOB.LaptopHack = true -- laptop hacking animation at the panel during the hack
-TOB.LaptopSceneOffset = 1.0 -- metres above a bank's animcoords (floor level) the laptop scene is placed: 1.0 =
-                            -- standing height. At 0 the player went under the floor (Qbox test); lower it a
-                            -- little if the laptop floats above the panel's shelf
+TOB.LaptopHack = true -- laptop hacking animation at the panel during the hack (also at the inner gate)
+TOB.LaptopSceneOffset = 1.5 -- metres above a bank's animcoords (floor level) the laptop scene is placed (Qbox
+                            -- test: 1.5 puts the laptop on the panel's shelf; at 0 the player went under the floor)
+TOB.LaptopSceneForward = 0.45 -- metres the scene is moved forward, towards the panel, so the player isn't pulled
+                              -- backwards when the animation starts. Raise it (0.55, 0.65) if they still jerk back
 TOB.VaultItemAnim = "thermite" -- animation for TOB.VaultItem: "thermite" (charge + burning sparks) or "weld"
 TOB.Alarm = true -- play the bank's alarm (banks with alarm = "...") until the heist ends. Fleeca banks use a silent alarm
 
@@ -93,11 +95,17 @@ TOB.TrolleySpawn = "auto"
 
 -- Special trolleys: sometimes one trolley holds gold or diamonds and pays more.
 -- Their models are from the Casino Heist update: they need game build 2060 or newer (sv_enforceGameBuild).
-TOB.SpecialTrolleyChance = 25 -- % chance per heist that one trolley is special (0 = off)
+TOB.SpecialTrolleyChance = 100 -- % chance per heist that one trolley is special (0 = off)
 TOB.SpecialTrolleys = {
-    gold = {model = "ch_prop_gold_trolly_01a", pile = "ch_prop_gold_bar_01a", empty = 2714348429, multiplier = 2.0, item = ""},
-    diamond = {model = "ch_prop_diamond_trolly_01a", pile = "ch_prop_vault_dimaondbox_01a", empty = 881130828, multiplier = 3.0, item = ""},
-    -- item = "goldbar", itemCount = 20 pays that item instead of cash (itemCount = items in a full trolley)
+    gold = {model = "ch_prop_gold_trolly_01a", pile = "ch_prop_gold_bar_01a", empty = false, multiplier = 2.0, item = "goldbar", itemCount = 44},
+    diamond = {model = "ch_prop_diamond_trolly_01a", pile = "ch_prop_vault_dimaondbox_01a", empty = false, multiplier = 3.0, item = "diamond", itemCount = 44},
+    -- empty = the model a looted trolley turns into. false = GTA has no empty version of that trolley (the
+    -- casino gold and diamond trolleys): it stays, held empty in the last frame of the grab animation.
+    -- The casino trolleys empty while grabbing; base-game ones like prop_gold_trolly_full don't.
+    -- item = "goldbar", itemCount = 44 pays that item instead of cash (itemCount = items in a full trolley; 44 is
+    -- one per grab of the animation, measured in game; the
+    -- items are worth what your server pays for them, e.g. at a fence). item = "" pays cash (the trolley's
+    -- value times multiplier). An item your inventory doesn't have is paid as cash (add them: install/).
 }
 
 -- Deposit boxes in the vault: drill them open while the vault is open

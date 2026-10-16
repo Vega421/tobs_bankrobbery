@@ -102,7 +102,7 @@ function HealthCheck()
     local users = {}
     if usesGame(TOB.HackMinigame) or usesGame(TOB.DrillMinigame) then users[#users + 1] = "the global settings" end
     for name, b in pairs(TOB.Banks or {}) do
-        if type(b.minigames) == "table" and (usesGame(b.minigames.hack) or usesGame(b.minigames.drill)) then users[#users + 1] = name end
+        if type(b.minigames) == "table" and (usesGame(b.minigames.hack) or usesGame(b.minigames.gate) or usesGame(b.minigames.drill)) then users[#users + 1] = name end
     end
     table.sort(users)
     if #users > 0 and not Started("tobs_minigames") then

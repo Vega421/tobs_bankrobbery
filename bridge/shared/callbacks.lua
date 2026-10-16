@@ -10,13 +10,13 @@ if IsDuplicityVersion() then
         registered[name] = fn
     end
 
-    RegisterServerEvent("bridge:cb:ask")
-    AddEventHandler("bridge:cb:ask", function(name, id, ...)
+    RegisterServerEvent(BridgeEvent .. "cb:ask")
+    AddEventHandler(BridgeEvent .. "cb:ask", function(name, id, ...)
         local src = source
         local fn = registered[name]
         if fn == nil then return end
         fn(src, function(...)
-            TriggerClientEvent("bridge:cb:answer", src, id, ...)
+            TriggerClientEvent(BridgeEvent .. "cb:answer", src, id, ...)
         end, ...)
     end)
 else
@@ -24,12 +24,12 @@ else
 
     function BridgeCallbacks.Trigger(name, cb, ...)
         pending[nextId] = cb
-        TriggerServerEvent("bridge:cb:ask", name, nextId, ...)
+        TriggerServerEvent(BridgeEvent .. "cb:ask", name, nextId, ...)
         nextId = nextId < 65535 and nextId + 1 or 0
     end
 
-    RegisterNetEvent("bridge:cb:answer")
-    AddEventHandler("bridge:cb:answer", function(id, ...)
+    RegisterNetEvent(BridgeEvent .. "cb:answer")
+    AddEventHandler(BridgeEvent .. "cb:answer", function(id, ...)
         local cb = pending[id]
         pending[id] = nil
         if cb then cb(...) end

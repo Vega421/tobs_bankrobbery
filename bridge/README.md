@@ -36,5 +36,5 @@ Item metadata (the `worth` on marked bills) only exists on Qbox and QBCore.
 
 ## Tested
 
-In game on **Qbox**. QBCore and ESX are covered by automated tests that run these files against a fake
-version of each framework, but haven't been played on a live server yet.
+In game on **Qbox**. QBCore and ESX are covered by `tests/bridge_test.lua`, which runs these files
+against a fake version of each framework, but haven't been played on a live server yet.

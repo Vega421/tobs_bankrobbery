@@ -45,11 +45,17 @@ function GateLockedByDefault(bank)
     return TOB.Banks[bank].doors.secondloc ~= nil
 end
 
--- The trolley behind the inner gate (banks with doors.secondloc). Set gateTrolley on a bank to change it.
-function GateTrolley(bank)
+-- True when a trolley is behind the inner gate (banks with doors.secondloc). In the Fleeca vaults two
+-- are: trolley1 and trolley2, with trolley3 in front of the gate (Qbox test, 2026-09-30). A bank sets
+-- its own with gateTrolleys = {"trolley3"} (gateTrolley = "trolley3", one name, still works).
+function IsGateTrolley(bank, slot)
     local b = TOB.Banks[bank]
-    if b.doors.secondloc == nil then return nil end
-    return b.gateTrolley or "trolley3"
+    if b.doors.secondloc == nil then return false end
+    local list = b.gateTrolleys or (b.gateTrolley and {b.gateTrolley}) or {"trolley1", "trolley2"}
+    for _, s in ipairs(list) do
+        if s == slot then return true end
+    end
+    return false
 end
 
 -- Door state for every bank, built from the gate and vault settings in TOB.Banks
@@ -118,7 +124,9 @@ end
 -- (it still pays the gold/diamond multiplier).
 local function ServerTrolleyModel(kind)
     local s = kind and TOB.SpecialTrolleys and TOB.SpecialTrolleys[kind]
-    if s and (tonumber(GetConvar("sv_enforceGameBuild", "0")) or 0) >= 2060 then
+    -- casino models (ch_...) need the casino game build; base-game ones (the gold trolley) work on any
+    local casino = type(s and s.model) ~= "string" or s.model:sub(1, 3) == "ch_"
+    if s and (not casino or (tonumber(GetConvar("sv_enforceGameBuild", "0")) or 0) >= 2060) then
         return type(s.model) == "number" and s.model or GetHashKey(s.model)
     end
     return GetHashKey("hei_prop_hei_cash_trolly_01")
@@ -210,7 +218,14 @@ function EndHeist(bank, reason, cooldown)
             totalCash = totalCash + p.cash
             local items = {}
             for name, n in pairs(p.items) do items[#items + 1] = ("%d × %s"):format(n, name) end
-            local extra = #items > 0 and (" (paid as %s)"):format(table.concat(items, ", ")) or ""
+            -- cash and items together (cash trolleys and a diamond trolley): name both, so the items
+            -- don't read as the whole amount
+            local extra = ""
+            if #items > 0 and p.cash > 0 then
+                extra = (" ($%s cash, %s)"):format(Money(p.cash), table.concat(items, ", "))
+            elseif #items > 0 then
+                extra = (" (paid as %s)"):format(table.concat(items, ", "))
+            end
             lines[#lines + 1] = ("%s: $%s%s"):format(p.name, Money(p.worth), extra)
         end
         if TOB.LootCounter then
@@ -315,6 +330,7 @@ local function Handover(bank, oldOwner)
     end
     if best == nil then return false end
     h.owner = best
+    h.gatePending = nil -- a gate minigame the old leader didn't finish: the new leader can hack the gate
     TriggerClientEvent("tobsbank:takeover", best, bank, {
         stage = h.stage,
         itemUsed = h.itemUsedAt ~= nil,
@@ -390,7 +406,14 @@ AddEventHandler("tobsbank:startcheck", function(bank)
         for kind, _ in pairs(TOB.SpecialTrolleys or {}) do kinds[#kinds + 1] = kind end
         table.sort(kinds)
         if #kinds > 0 and math.random(100) <= (TOB.SpecialTrolleyChance or 0) then
-            special = {["trolley" .. math.random(3)] = kinds[math.random(#kinds)]}
+            -- Gold / diamonds stand behind the inner gate (one of its trolleys, at random): the reward for
+            -- getting through it. At a bank without a gate, any trolley.
+            local slots = {}
+            for i = 1, 3 do
+                if IsGateTrolley(bank, "trolley" .. i) then slots[#slots + 1] = "trolley" .. i end
+            end
+            if #slots == 0 then slots = {"trolley1", "trolley2", "trolley3"} end
+            special = {[slots[math.random(#slots)]] = kinds[math.random(#kinds)]}
         end
         Heists[bank] = {owner = _source, started = os.time(), looted = {}, payouts = {}, boxes = {}, special = special}
         SetStage(bank, "card")
@@ -447,14 +470,16 @@ AddEventHandler("tobsbank:useVaultItem", function(bank)
     end
 end)
 
--- Banks with doors.secondloc (Fleeca) have an inner gate the robber hacks after the vault opens.
--- The gate opens TOB.GateHackTime after the hack started.
+-- Banks with doors.secondloc (Fleeca) have an inner gate the robber hacks after the vault opens:
+-- useGate (item) → the robber's minigame → gateHackStarted, and the gate opens TOB.GateHackTime
+-- later. A failed minigame (gateHackFailed) frees the gate for another try; the heist goes on.
 RegisterServerEvent("tobsbank:useGate")
 AddEventHandler("tobsbank:useGate", function(bank)
     local _source = source
     local h = Heists[bank]
 
-    if h == nil or h.owner ~= _source or h.stage ~= "open" or h.gateAt ~= nil or TOB.Banks[bank].doors.secondloc == nil then return end
+    if h == nil or h.owner ~= _source or h.stage ~= "open" or h.gateAt ~= nil or h.gatePending
+        or TOB.Banks[bank].doors.secondloc == nil then return end
     if not IsNear(_source, TOB.Banks[bank].doors.secondloc, 5.0) then
         Flag(_source, "Tried to hack the inner gate at " .. BankName(bank) .. " from far away.")
         return
@@ -466,8 +491,25 @@ AddEventHandler("tobsbank:useGate", function(bank)
             return
         end
     end
-    h.gateAt = GetGameTimer()
+    h.gatePending = true
     TriggerClientEvent("tobsbank:gateResult", _source, bank, true)
+end)
+
+-- The robber passed the gate's minigame: the gate timer starts now
+RegisterServerEvent("tobsbank:gateHackStarted")
+AddEventHandler("tobsbank:gateHackStarted", function(bank)
+    local h = Heists[bank]
+    if h == nil or h.owner ~= source or h.stage ~= "open" or not h.gatePending then return end
+    h.gatePending = nil
+    h.gateAt = GetGameTimer()
+end)
+
+-- The robber failed the gate's minigame: the gate can be tried again (the item is used up)
+RegisterServerEvent("tobsbank:gateHackFailed")
+AddEventHandler("tobsbank:gateHackFailed", function(bank)
+    local h = Heists[bank]
+    if h == nil or h.owner ~= source or not h.gatePending then return end
+    h.gatePending = nil
 end)
 
 -- Thermite sparks for everyone near the vault (the robber's game asks, the server checks)

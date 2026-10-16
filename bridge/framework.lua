@@ -37,6 +37,10 @@ end
 
 Bridge = {Framework = Framework}
 
+-- Event names carry the resource name, so two scripts with their own bridge copy never answer each
+-- other's callbacks or show each other's notifications
+BridgeEvent = "bridge:" .. GetCurrentResourceName() .. ":"
+
 function BridgeLog(...)
     print(("^3[bridge]^7 %s"):format(table.concat({...}, " ")))
 end
