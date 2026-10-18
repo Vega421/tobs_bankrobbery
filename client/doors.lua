@@ -2,17 +2,46 @@
 -- The gate uses GTA's door system, registered locally for each player; the server decides if it's locked.
 
 local gateRegistered = {} -- [bank] = true once the gate is in the door system
+local otherGate = {}      -- [bank] = the door system entry another door script made for the same gate
 GATE_SEARCH = 4.0         -- metres around gate.loc to look for the gate model
 
 local function GateDoorHash(bank)
     return GetHashKey("tobs_bankrobbery_gate_" .. bank)
 end
 
--- Applies the server's locked state to the gate (1 = locked, 0 = unlocked)
+-- Applies the server's locked state to the gate (1 = locked, 0 = unlocked). Another door script can
+-- hold the same gate: QBCore's qb-doorlock locks every Fleeca gate and Paleto's by default (for
+-- qb-bankrobbery), and a locked entry keeps the gate shut whatever ours says. So an open gate is
+-- opened in that entry too; a locked one is left to ours, so police can still use their door script.
 local function ApplyGate(bank)
     if gateRegistered[bank] then
-        DoorSystemSetDoorState(GateDoorHash(bank), Doors[bank][1].locked and 1 or 0, false, false)
+        local locked = Doors[bank][1].locked
+        DoorSystemSetDoorState(GateDoorHash(bank), locked and 1 or 0, false, false)
+        if not locked and otherGate[bank] then
+            DoorSystemSetDoorState(otherGate[bank], 0, false, false)
+        end
     end
+end
+
+-- The heading that faces the inner gate square on from `here`, from the gate itself: its panel is the
+-- wide side of the model, and the player faces across it. The config's heading suits the Fleeca gate
+-- but turned the player sideways at Paleto's gate, a different model (QBCore test). nil = no gate found.
+function GateFacing(bank, here)
+    local g = Doors[bank] and Doors[bank][1].loc
+    if not g then return nil end
+    local obj = GetClosestObjectOfType(g.x, g.y, g.z, GATE_SEARCH, GateModel(bank), false, false, false)
+    if obj == 0 then return nil end
+    local mn, mx = GetModelDimensions(GetEntityModel(obj))
+    local origin = GetEntityCoords(obj)
+    local centre = GetOffsetFromEntityInWorldCoords(obj, (mn.x + mx.x) / 2, (mn.y + mx.y) / 2, (mn.z + mx.z) / 2)
+    local n
+    if (mx.x - mn.x) >= (mx.y - mn.y) then
+        n = GetOffsetFromEntityInWorldCoords(obj, 0.0, 1.0, 0.0) - origin
+    else
+        n = GetOffsetFromEntityInWorldCoords(obj, 1.0, 0.0, 0.0) - origin
+    end
+    if n.x * (centre.x - here.x) + n.y * (centre.y - here.y) < 0 then n = -n end
+    return GetHeadingFromVector_2d(n.x, n.y)
 end
 
 function DoorThreads()
@@ -32,6 +61,10 @@ function DoorThreads()
                         local obj = GetClosestObjectOfType(v[1].loc.x, v[1].loc.y, v[1].loc.z, GATE_SEARCH, GateModel(k), false, false, false)
                         if obj ~= 0 then
                             local c = GetEntityCoords(obj)
+                            -- another door script's entry for this gate (looked for before ours is added,
+                            -- so it can't find ours)
+                            local found, other = DoorSystemFindExistingDoor(c.x, c.y, c.z, GateModel(k))
+                            if found and other and other ~= 0 and other ~= GateDoorHash(k) then otherGate[k] = other end
                             AddDoorToSystem(GateDoorHash(k), GateModel(k), c.x, c.y, c.z, false, false, false)
                             gateRegistered[k] = true
                         end

@@ -6,7 +6,7 @@ Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
 ## 1.0.1 · not released yet
 
-Fixes from playing 1.0.0 on the Qbox test server.
+Fixes from playing 1.0.0 on the Qbox test server, and the first test on a live QBCore server (qb-inventory, qb-target, qb-doorlock, without ox_lib or ox_target): Paleto and the Fleeca banks work there now.
 
 - **Laptop hack:** the player is no longer pulled backwards when the animation starts. The scene sits `TOB.LaptopSceneForward` (new, 0.45 m) in front of the panel and `TOB.LaptopSceneOffset` (now 1.5 m) above the floor, the access card stays in the hand, and other players can't push the robber out of the scene
 - **Inner gate:** hacked like the vault, with the laptop at its panel and the bank's minigame. The gate timer only starts once the minigame is passed; a failed gate minigame frees the gate for another try (with a new gate item) instead of opening it anyway
@@ -20,9 +20,15 @@ Fixes from playing 1.0.0 on the Qbox test server.
 - **Paleto's vault door** swung into the vault: it's hung the other way than the Fleeca doors. Each bank sets the direction with `vaultTurn` (degrees to open: -90 by default, Paleto 90)
 - **Gold and diamond trolleys stand behind the inner gate** (one of its trolleys, at random), as the reward for getting through it; at banks without a gate, any trolley
 - **Gold and diamond trolleys pay gold bars and diamonds:** 44 `goldbar` / 44 `diamond` for a full trolley, one per grab of the animation (`item` / `itemCount` in `TOB.SpecialTrolleys`; `item = ""` pays cash as before). Both items are in the `install/` files, and `install/images/` has inventory images for `id_card_f`, `diamond` and `secure_card`. An item the inventory doesn't have is paid as cash instead of nothing. The loot counter counts the items ("12x Gold Bar") and the end message says "You grabbed 20x Gold Bar."
+- **The heist's end log** (console and Discord) names the cash next to the items when a player got both: "Vega: $199,363 ($100,123 cash, 44 × diamond)". Before, it said "(paid as 44 × diamond)", as if the whole amount was diamonds
 - **Trolleys** spawned by the leader are networked mission entities, so every player sees them
 - **Standing spots:** players are put on a bank's animcoords at floor level (1 m higher left them floating)
 - **All Fleeca banks** use the hacking laptop and drill minigames (with tobs_minigames), and Paleto has its own cash range (40,000–60,000)
+- **QBCore without ox_lib:** the heist stopped with "No such export startUI in resource progressBars" at the first progress bar. `TOB.Progress = "auto"` now uses ox_lib, else QBCore's `progressbar`, else `progressBars`, else no bar (the same wait), and never calls a resource that isn't running
+- **The inner gate didn't open on QBCore:** qb-doorlock locks every Fleeca gate and Paleto's in its default config (for qb-bankrobbery), and that lock kept the gate shut after a passed hack. When the heist opens a gate, another door script's lock on it is now opened too (qb-doorlock, ox_doorlock or any other); a locked gate is left to that script, so police can still use it. `/tobcheck` mentions qb-doorlock's bank doors
+- **Drilling a deposit box** stands the robber square in front of the box, facing its wall: they took a step there and the drill pointed at the wall. Before, they only turned towards the box's centre from where they stood, so from the side (a target eye lets you aim from further away) the drill animation pointed sideways. The box's wall is found around the box, so boxes near a corner (Paleto) don't take the side wall
+- **Opening the inner gate faces the gate:** with a gate minigame other than the laptop, the robber now faces across the gate, worked out from the gate itself. The config's heading turned them sideways at Paleto, whose gate is a different model
+- **qb-target:** the target eye now works with qb-target too, not only ox_target. `TOB.Target = "auto"` uses ox_target if it runs, else qb-target, else "press E"; `"qb-target"` picks it by hand. With qb-target the trolleys are targeted as objects, zones at the same spot are merged (a Fleeca's start panel and vault door, Paleto's gate), overlapping zones show each other's options and deposit boxes side by side are made smaller (qb-target only ever looks at the first of two overlapping zones, so a deposit box could hide a trolley or the gate panel), and the reach is 2.5 m from where the player looks. Its zones and models are removed when the resource stops, so a restart doesn't leave old ones behind
 
 ## 1.0.0 · 2026-09-28
 

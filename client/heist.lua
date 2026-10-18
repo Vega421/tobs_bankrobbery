@@ -291,6 +291,11 @@ AddEventHandler("tobsbank:gateResult", function(bank, ok)
     -- the gate timer only once the minigame is passed (tobsbank:gateHackStarted).
     StandAt(ped, second.animcoords)
     local atLaptop = GateUsesLaptop(bank)
+    -- the laptop scene keeps the config's heading (it's set for the panel); other games face the gate
+    if not atLaptop then
+        local h = GateFacing(bank, GetEntityCoords(ped))
+        if h then SetEntityHeading(ped, h) end
+    end
     local laptop = TOB.LaptopHack and atLaptop and LaptopStart(second.animcoords) or nil
     if not BankGateMinigame(bank, function(v) return HackMinigame(bank, v) end) then
         LaptopStop(laptop)

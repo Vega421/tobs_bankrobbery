@@ -134,12 +134,13 @@ Citizen.CreateThread(function()
     end
 end)
 
--- ox_target zones, used instead of "press E" prompts when TOB.Target allows it
+-- Target zones (ox_target or qb-target, see AddTargetZone), used instead of "press E" prompts when TOB.Target allows it
 function RegisterTargets()
+    local trolleySlots, trolleyKinds = {}, {false}
     for k, v in pairs(TOB.Banks) do
         local start = v.doors.startloc
 
-        exports.ox_target:addSphereZone({
+        AddTargetZone({
             coords = vector3(start.x, start.y, start.z),
             radius = 1.0,
             options = {{
@@ -159,7 +160,7 @@ function RegisterTargets()
         if v.doors.secondloc ~= nil then
             local second = v.doors.secondloc
 
-            exports.ox_target:addSphereZone({
+            AddTargetZone({
                 coords = vector3(second.x, second.y, second.z),
                 radius = 1.0,
                 options = {{
@@ -181,6 +182,12 @@ function RegisterTargets()
         for i = 1, 3 do
             local t = v["trolley" .. i]
             local loot = "Loot" .. i
+            -- qb-target: the trolley objects themselves are the targets (AddTrolleyModelTargets, below)
+            if TargetSystem() == "qb-target" then
+                trolleySlots[#trolleySlots + 1] = {bank = k, slot = i, pos = vector3(t.x, t.y, t.z)}
+                trolleyKinds = kinds
+                goto nextTrolley
+            end
             local options = {}
             for _, kind in ipairs(kinds) do
                 options[#options + 1] = {
@@ -195,14 +202,16 @@ function RegisterTargets()
                     onSelect = function() RequestLoot(k, loot) end
                 }
             end
-            exports.ox_target:addSphereZone({coords = vector3(t.x, t.y, t.z + 1.0), radius = 0.8, options = options})
+            AddTargetZone({coords = vector3(t.x, t.y, t.z + 1.0), radius = 0.8, options = options})
+            ::nextTrolley::
         end
     end
+    if #trolleySlots > 0 then AddTrolleyModelTargets(trolleySlots, trolleyKinds) end
 
     if TOB.DepositBoxes then
         for k, v in pairs(TOB.Banks) do
             for i, box in ipairs(v.boxes or {}) do
-                exports.ox_target:addSphereZone({
+                AddTargetZone({
                     coords = box,
                     radius = 0.6,
                     options = {{
@@ -256,9 +265,10 @@ function RegisterTargets()
                     onSelect = function() UseVaultItem(k) end
                 }
             end
-            exports.ox_target:addSphereZone({coords = v[i].txtloc, radius = 1.0, options = options})
+            AddTargetZone({coords = v[i].txtloc, radius = 1.0, options = options})
         end
     end
+    FlushTargetZones() -- qb-target: merge and size the zones, then register them (ox_target: nothing to do)
 end
 
 -- Setup helper for adding banks: prints your position and heading, ready to paste into TOB.Banks

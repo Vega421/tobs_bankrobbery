@@ -120,6 +120,19 @@ function HealthCheck()
     if (TOB.SpecialTrolleyChance or 0) > 0 and GetConvarInt("sv_enforceGameBuild", 0) < 2060 then
         note("Gold and diamond trolleys use the cash trolley model: set sv_enforceGameBuild 2060 or newer to see them.")
     end
+    -- QBCore's qb-doorlock locks the bank gates in its default config (for qb-bankrobbery). The heist
+    -- opens them anyway, but the door is then in two scripts: worth knowing when something's odd.
+    if GetResourceState("qb-doorlock") == "started" then
+        local cfg = LoadResourceFile("qb-doorlock", "config.lua") or ""
+        local found = {}
+        for _, model in ipairs({"v_ilev_gb_vaubar", "v_ilev_cbankvaulgate01", "v_ilev_cbankvaulgate02"}) do
+            if cfg:find(model, 1, true) then found[#found + 1] = model end
+        end
+        if #found > 0 then
+            note("qb-doorlock's config locks bank gates (" .. table.concat(found, ", ") .. ", for qb-bankrobbery). The heist opens its inner gates anyway; "
+                .. "remove those doors from qb-doorlock/config.lua if you don't use qb-bankrobbery. At Paleto, its locked \"Door 1\" (v_ilev_cbankvaulgate01) is next to the start panel.")
+        end
+    end
 
     local missing = {}
     for _, cmd in ipairs({SV.ResetCommand, SV.PauseCommand, SV.TestCommand, SV.CheckCommand}) do

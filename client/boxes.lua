@@ -1,6 +1,59 @@
 -- Deposit boxes: drill them open while the vault is open (TOB.DepositBoxes)
 
 local drilling = false
+local STAND_OFF = 0.55 -- metres between the wall and where the robber stands to drill
+
+-- Where to stand for a box, square to the wall it's in: the wall's facing (its surface normal) gives
+-- the spot in front of the box and the heading. Facing the box's centre from wherever the player stood
+-- (a target eye lets them stand off to the side) turned the drill animation sideways.
+-- The wall is found with short lines in 16 directions from just in front of the box, keeping the hit
+-- nearest the box: one line from the player hit the side wall at boxes near a corner (Paleto, QBCore
+-- test). Map and objects both count (a vault can be built from props). nil when nothing is hit.
+local RAY_FLAGS = 1 + 16
+local function DrillSpot(ped, pos, here)
+    local dir = vector3(here.x - pos.x, here.y - pos.y, 0.0)
+    local len = #dir
+    if len < 0.01 then return nil end
+    local from = vector3(pos.x + dir.x / len * 0.4, pos.y + dir.y / len * 0.4, pos.z)
+    local best, bestDist, bestN
+    for i = 0, 15 do
+        local a = i * math.pi / 8
+        local to = vector3(from.x + math.cos(a) * 1.2, from.y + math.sin(a) * 1.2, from.z)
+        local ray = StartExpensiveSynchronousShapeTestLosProbe(from.x, from.y, from.z, to.x, to.y, to.z, RAY_FLAGS, ped, 4)
+        local _, hit, hitAt, normal = GetShapeTestResult(ray)
+        if hit == 1 or hit == true then
+            local n = vector3(normal.x, normal.y, 0.0)
+            local nl = #n
+            if nl >= 0.5 then -- a wall, not a floor or shelf top
+                local d = #(vector3(pos.x - hitAt.x, pos.y - hitAt.y, 0.0))
+                if not bestDist or d < bestDist then
+                    best, bestDist, bestN = hitAt, d, vector3(n.x / nl, n.y / nl, 0.0)
+                end
+            end
+        end
+    end
+    if not best then return nil end
+    -- in front of the box (not of where the line hit), at the player's height
+    local base = bestDist < 0.6 and pos or best
+    return vector3(base.x + bestN.x * STAND_OFF, base.y + bestN.y * STAND_OFF, here.z), GetHeadingFromVector_2d(-bestN.x, -bestN.y)
+end
+
+-- Walks the robber to the drill spot (a step at most) and turns them to the wall
+local function GoToDrillSpot(ped, pos)
+    local here = GetEntityCoords(ped)
+    local spot, heading = DrillSpot(ped, pos, here)
+    if not spot then
+        SetEntityHeading(ped, GetHeadingFromVector_2d(pos.x - here.x, pos.y - here.y))
+        return
+    end
+    if #(here - spot) > 0.15 then
+        TaskGoStraightToCoord(ped, spot.x, spot.y, spot.z, 1.0, 1500, heading, 0.05)
+        local deadline = GetGameTimer() + 1500
+        while #(GetEntityCoords(ped) - spot) > 0.15 and GetGameTimer() < deadline do Citizen.Wait(50) end
+        ClearPedTasks(ped)
+    end
+    SetEntityHeading(ped, heading)
+end
 
 function DrillBox(bank, box)
     if drilling or DisableInput then return end
@@ -16,11 +69,11 @@ AddEventHandler("tobsbank:drillResult", function(bank, box, ok, reason)
     drilling = true
     local ped = PlayerPedId()
     local pos = TOB.Banks[bank].boxes[box]
-    local here = GetEntityCoords(ped)
     local dict = "anim@heists@fleeca_bank@drilling"
     local drillHash = GetHashKey("hei_prop_heist_drill")
 
-    SetEntityHeading(ped, GetHeadingFromVector_2d(pos.x - here.x, pos.y - here.y))
+    GoToDrillSpot(ped, pos)
+    local here = GetEntityCoords(ped)
     LoadDict(dict)
     LoadModel(drillHash)
     TaskPlayAnim(ped, dict, "drill_straight_idle", 3.0, 3.0, -1, 1, 0, false, false, false)

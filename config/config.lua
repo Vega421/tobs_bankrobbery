@@ -14,7 +14,7 @@ TOB.PoliceOnDuty = true -- QBCore / Qbox: only count officers who are on duty
 
 -- Heist
 TOB.mincops = 4 -- police needed online to start the heist
-TOB.hacktime = 20000 -- hack duration in milliseconds (60000 = 1 min). Gives police time to arrive
+TOB.hacktime = 60000 -- hack duration in milliseconds (60000 = 1 min). Gives police time to arrive
 TOB.timer = 300 -- seconds after the hack before the doors lock again (also the time limit for TOB.VaultItem)
 TOB.VaultCloseDelay = 30 -- seconds between the last trolley being looted and the vault closing
 TOB.cooldown = 600 -- seconds before a bank can be robbed again (600 = 10 min)
@@ -41,10 +41,12 @@ TOB.VaultItem = "" -- item name, e.g. "thermite" or "drill". "" = the vault open
 TOB.VaultItemLabel = "thermite" -- name shown to players
 TOB.VaultItemTime = 15000 -- milliseconds the robber works on the vault door
 
--- Inner gate (Fleeca banks): after the vault opens, the robber hacks a second panel to reach the last trolley.
+-- Inner gate (banks with doors.secondloc: all of them by default): after the vault opens, the robber opens a
+-- second panel to reach the trolleys behind it (gateTrolleys in config/banks.lua). Its minigame is the bank's
+-- gate game (minigames in config/banks.lua: thermite by default).
 TOB.GateItem = "" -- item needed for the second panel, e.g. "secure_card". "" = no item needed
 TOB.GateItemLabel = "Secure ID Card" -- name shown to players
-TOB.GateHackTime = 10000 -- milliseconds the gate hack takes
+TOB.GateHackTime = 10000 -- milliseconds opening the gate takes after its minigame
 
 -- Rewards. A full trolley pays TOB.TrolleyCash; stopping early pays for the time spent grabbing.
 TOB.TrolleyCash = {min = 50000, max = 80000} -- cash in one full trolley (3 trolleys per heist)
@@ -87,7 +89,7 @@ TOB.Alarm = true -- play the bank's alarm (banks with alarm = "...") until the h
 
 -- Grabbing
 TOB.StopGrabKey = 73 -- key to stop grabbing early and keep what you grabbed (73 = X). false = can't stop
-TOB.LootCounter = true -- show the cash grabbed on screen, and everyone's total at the end
+TOB.LootCounter = true -- show the cash (or gold bars / diamonds) grabbed on screen, and everyone's total at the end
 
 -- Who spawns the trolleys: "auto" = the server when OneSync is on (they stay when players leave),
 -- otherwise the heist leader's game. "server" or "client" to force one.
@@ -95,7 +97,7 @@ TOB.TrolleySpawn = "auto"
 
 -- Special trolleys: sometimes one trolley holds gold or diamonds and pays more.
 -- Their models are from the Casino Heist update: they need game build 2060 or newer (sv_enforceGameBuild).
-TOB.SpecialTrolleyChance = 100 -- % chance per heist that one trolley is special (0 = off)
+TOB.SpecialTrolleyChance = 25 -- % chance per heist that one trolley is special (0 = off)
 TOB.SpecialTrolleys = {
     gold = {model = "ch_prop_gold_trolly_01a", pile = "ch_prop_gold_bar_01a", empty = false, multiplier = 2.0, item = "goldbar", itemCount = 44},
     diamond = {model = "ch_prop_diamond_trolly_01a", pile = "ch_prop_vault_dimaondbox_01a", empty = false, multiplier = 3.0, item = "diamond", itemCount = 44},
@@ -124,9 +126,9 @@ TOB.DrillRewards = {
 }
 
 -- Interaction and UI
-TOB.Target = "auto" -- "auto" (ox_target if running, otherwise press E), "ox_target" or "none" (always press E)
+TOB.Target = "auto" -- "auto" (ox_target if running, else qb-target, else press E), "ox_target", "qb-target" or "none" (always press E)
 TOB.Prompts = "auto" -- "press E" prompts: "auto" (ox_lib text UI if running, otherwise 3D text), "ox_lib" or "3d"
-TOB.Progress = "auto" -- "auto" (ox_lib if running, otherwise progressBars), "ox_lib" or "progressBars"
+TOB.Progress = "auto" -- "auto" (ox_lib, else QBCore's progressbar, else progressBars, else no bar), "ox_lib", "progressbar", "progressBars" or "none"
 TOB.Notify = "auto" -- "auto", "ox_lib", "mythic_notify", "framework" (ESX / QBCore notifications) or "native". "auto" uses ox_lib, then mythic_notify, then the framework's
 TOB.NotifyTitle = "Bank Robbery" -- title shown on ox_lib notifications
 TOB.CoordsCommand = "bankcoords" -- prints your position (for adding banks) in chat and the F8 console. false = off

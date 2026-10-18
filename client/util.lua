@@ -50,18 +50,39 @@ end
 
 -- Progress bars. Pick a system with TOB.Progress in config/config.lua. Waits until the bar is done
 -- and returns false if it was interrupted (for example because the player died).
+-- "auto": ox_lib, else QBCore's progressbar, else progressBars, else no bar (the same wait, so the
+-- heist's timing never depends on which bar a server has).
+local function Started(name) return GetResourceState(name) == "started" end
+
 function Progress(ms, label)
     local mode = TOB.Progress
 
     if mode == "auto" then
-        mode = GetResourceState("ox_lib") == "started" and "ox_lib" or "progressBars"
+        mode = Started("ox_lib") and "ox_lib" or Started("progressbar") and "progressbar" or Started("progressBars") and "progressBars" or "none"
     end
     if mode == "ox_lib" then
         return exports.ox_lib:progressBar({duration = ms, label = label, canCancel = false}) ~= false
     end
-    exports["progressBars"]:startUI(ms, label)
+    if mode == "progressbar" then
+        -- QBCore's progressbar answers through a callback. It doesn't start (and never answers) while
+        -- another bar runs, so the wait ends after the bar's own time either way.
+        local done, result = false, true
+        local ok = pcall(function()
+            exports["progressbar"]:Progress({
+                name = "tobs_bankrobbery", duration = ms, label = label, useWhileDead = false, canCancel = false,
+                controlDisables = {disableMovement = false, disableCarMovement = false, disableMouse = false, disableCombat = false},
+            }, function(cancelled) done, result = true, not cancelled end)
+        end)
+        local deadline = GetGameTimer() + ms + 1000
+        while ok and not done and GetGameTimer() < deadline do Citizen.Wait(50) end
+        if not ok then Citizen.Wait(ms) end
+        return result and not IsEntityDead(PlayerPedId())
+    end
+    if mode == "progressBars" then
+        exports["progressBars"]:startUI(ms, label)
+    end
     Citizen.Wait(ms)
-    return true
+    return not IsEntityDead(PlayerPedId())
 end
 
 -- MINIGAMES --
@@ -98,13 +119,159 @@ function DrillMinigame(bank, box, m)
     return exports.ox_lib:skillCheck(m, TOB.MinigameKeys) == true
 end
 
--- True when ox_target should be used instead of "press E" prompts
-function UseTarget()
-    if TOB.Target == "ox_target" then
-        return true
-    end
-    return TOB.Target == "auto" and GetResourceState("ox_target") == "started"
+-- TARGETING --
+-- TOB.Target "auto": ox_target if it runs, else qb-target, else "press E" prompts.
+
+-- "ox_target", "qb-target", or nil for "press E"
+function TargetSystem()
+    local t = TOB.Target or "auto"
+    if t == "none" then return nil end
+    if t == "ox_target" or t == "qb-target" then return t end
+    if Started("ox_target") then return "ox_target" end
+    if Started("qb-target") then return "qb-target" end
+    return nil
 end
+
+-- True when a target eye is used instead of "press E" prompts
+function UseTarget()
+    return TargetSystem() ~= nil
+end
+
+-- One target zone, written in ox_target's shape: {coords, radius, options = {{name, icon, label,
+-- distance, canInteract, onSelect}}}. ox_target gets it straight away. qb-target zones wait for
+-- FlushTargetZones, because qb-target handles overlap differently: where zones overlap it only ever
+-- looks at the first one (even when that one has nothing to show), so the zones are merged and sized
+-- there first.
+local qbPending, qbZones, qbModels = {}, {}, {}
+local QB_REACH = 2.5   -- qb-target measures from the player to the point looked at, not to the zone
+local QB_MERGE = 0.6   -- zones closer than this become one zone with all their options
+
+function AddTargetZone(zone)
+    if TargetSystem() ~= "qb-target" then
+        return exports.ox_target:addSphereZone(zone)
+    end
+    qbPending[#qbPending + 1] = zone
+end
+
+-- qb-target: registers the zones added since the last call, so that overlap works like ox_target's
+-- (all options of the zones at the aimed-at point):
+-- 1. zones at (almost) the same spot are merged (a Fleeca's start panel and vault door, Paleto's gate)
+-- 2. overlapping zones with the same option (deposit boxes side by side) are made smaller until they
+--    don't overlap: qb-target keys options by label, so one box could never show the other's
+-- 3. other overlapping zones each get the other's options, so whichever one qb-target picks shows
+--    everything (a deposit box next to the inner gate's panel can't hide the gate)
+function FlushTargetZones()
+    if TargetSystem() ~= "qb-target" then return end
+    local zones = {}
+    for _, z in ipairs(qbPending) do
+        local into
+        for _, c in ipairs(zones) do
+            if #(c.coords - z.coords) < QB_MERGE then into = c break end
+        end
+        if into then
+            into.radius = math.max(into.radius, z.radius)
+            for _, o in ipairs(z.options) do into.own[#into.own + 1] = o end
+        else
+            local own = {}
+            for _, o in ipairs(z.options) do own[#own + 1] = o end
+            zones[#zones + 1] = {coords = z.coords, radius = z.radius, own = own}
+        end
+    end
+    qbPending = {}
+
+    local function labels(z)
+        local set = {}
+        for _, o in ipairs(z.own) do set[o.label] = true end
+        return set
+    end
+    local function shareLabel(a, b)
+        local la = labels(a)
+        for _, o in ipairs(b.own) do if la[o.label] then return true end end
+        return false
+    end
+    -- 2. same option: smaller until they don't overlap
+    for i, a in ipairs(zones) do
+        for j, b in ipairs(zones) do
+            if i < j and shareLabel(a, b) then
+                local d = #(a.coords - b.coords)
+                if a.radius + b.radius > d - 0.05 then
+                    local r = math.max(0.25, d / 2 - 0.05)
+                    a.radius, b.radius = math.min(a.radius, r), math.min(b.radius, r)
+                end
+            end
+        end
+    end
+    -- 3. other overlaps: each zone also carries the options of the zones it overlaps
+    for i, a in ipairs(zones) do
+        a.options = {}
+        for _, o in ipairs(a.own) do a.options[#a.options + 1] = o end
+        for j, b in ipairs(zones) do
+            if i ~= j and not shareLabel(a, b) and #(a.coords - b.coords) < a.radius + b.radius then
+                for _, o in ipairs(b.own) do a.options[#a.options + 1] = o end
+            end
+        end
+    end
+
+    for _, z in ipairs(zones) do
+        -- qb-target keys options by label: two doors in one zone would hide one, so repeats get a number
+        local options, seen = {}, {}
+        for _, o in ipairs(z.options) do
+            local label = o.label
+            seen[label] = (seen[label] or 0) + 1
+            if seen[label] > 1 then label = ("%s (%d)"):format(label, seen[label]) end
+            options[#options + 1] = {icon = o.icon, label = label, canInteract = o.canInteract, action = o.onSelect}
+        end
+        local name = ("tobs_bankrobbery_%d"):format(#qbZones + 1)
+        exports["qb-target"]:AddCircleZone(name, z.coords, z.radius, {name = name, debugPoly = false, useZ = true},
+            {options = options, distance = QB_REACH})
+        qbZones[#qbZones + 1] = name
+    end
+end
+
+-- qb-target: the trolleys are targeted as objects (their models) instead of zones, so aiming at a
+-- trolley always finds it, whatever zone is near. slots = {{bank, slot, pos}}; each trolley kind gets
+-- its own label, and the option works out which bank and trolley the aimed-at object is.
+function AddTrolleyModelTargets(slots, kinds)
+    local function slotAt(entity)
+        local pos, best, bestDist = GetEntityCoords(entity), nil, 1.5
+        for _, s in ipairs(slots) do
+            local d = #(pos - s.pos)
+            if d < bestDist then best, bestDist = s, d end
+        end
+        return best
+    end
+    for _, kind in ipairs(kinds) do
+        local model = TrolleyModels(kind or nil).model
+        local label = LootLabel(kind or nil)
+        exports["qb-target"]:AddTargetModel({model}, {distance = QB_REACH, options = {{
+            icon = "fa-solid fa-sack-dollar",
+            label = label,
+            canInteract = function(entity)
+                local s = slotAt(entity)
+                if not s then return false end
+                local special = LootSpecial[s.bank] and LootSpecial[s.bank]["trolley" .. s.slot] or false
+                return LootOpen[s.bank] and special == kind and not LootCheck[s.bank]["Loot" .. s.slot] and not IsPoliceJob()
+            end,
+            action = function(entity)
+                local s = slotAt(entity)
+                if s then RequestLoot(s.bank, "Loot" .. s.slot) end
+            end,
+        }}})
+        qbModels[#qbModels + 1] = {model = model, label = label}
+    end
+end
+
+-- qb-target keeps a stopped resource's zones and models (ox_target drops them by itself): remove
+-- ours, or a restart of this resource leaves targets behind that call into the old, stopped copy
+AddEventHandler("onResourceStop", function(resource)
+    if resource ~= GetCurrentResourceName() then return end
+    for _, name in ipairs(qbZones) do
+        pcall(function() exports["qb-target"]:RemoveZone(name) end)
+    end
+    for _, m in ipairs(qbModels) do
+        pcall(function() exports["qb-target"]:RemoveTargetModel({m.model}, m.label) end)
+    end
+end)
 
 function IsPoliceJob()
     return Bridge.IsPolice()
