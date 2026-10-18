@@ -88,7 +88,8 @@ TOB.VaultItemAnim = "thermite" -- animation for TOB.VaultItem: "thermite" (charg
 TOB.Alarm = true -- play the bank's alarm (banks with alarm = "...") until the heist ends. Fleeca banks use a silent alarm
 
 -- Grabbing
-TOB.StopGrabKey = 73 -- key to stop grabbing early and keep what you grabbed (73 = X). false = can't stop
+TOB.StopGrabKey = 47 -- key to stop grabbing early and keep what you grabbed (47 = G). false = can't stop
+                     -- (not X, 73: QBCore's qb-smallresources puts the hands up on X)
 TOB.LootCounter = true -- show the cash (or gold bars / diamonds) grabbed on screen, and everyone's total at the end
 
 -- Who spawns the trolleys: "auto" = the server when OneSync is on (they stay when players leave),

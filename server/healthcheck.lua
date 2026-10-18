@@ -134,6 +134,18 @@ function HealthCheck()
         end
     end
 
+    -- QBCore's qb-smallresources puts the hands up on X. Stopping a grab with X then also put the hands
+    -- up, and its hands-down doesn't free every control it blocked: no driving, steering or shooting
+    -- until a restart (QBCore test). The default is G; this is for a server that set X itself.
+    if tonumber(TOB.StopGrabKey) == 73 and GetResourceState("qb-smallresources") == "started" then
+        local cfg = LoadResourceFile("qb-smallresources", "config.lua") or ""
+        local hands = cfg:match("HandsUp%s*=%s*(%b{})")
+        if hands and hands:find("keybind%s*=%s*['\"][xX]['\"]") then
+            note("qb-smallresources puts the hands up on X, the same key as TOB.StopGrabKey (stop grabbing). Stopping a grab also raises the hands, "
+                .. "and qb-smallresources can leave driving and shooting blocked after that. Set TOB.StopGrabKey = 47 (G, the default), or change HandsUp.keybind in qb-smallresources/config.lua.")
+        end
+    end
+
     local missing = {}
     for _, cmd in ipairs({SV.ResetCommand, SV.PauseCommand, SV.TestCommand, SV.CheckCommand}) do
         if cmd and cmd ~= "" and not IsPrincipalAceAllowed("group.admin", "command." .. cmd) then

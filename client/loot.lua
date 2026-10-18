@@ -7,6 +7,28 @@ local PAY_ASK_EVERY = 1000 -- ms: while grabbing, the money is asked for at leas
 GRAB_DICT = "anim@heists@ornate_bank@grab_cash"
 TrolleyDone = {} -- [bank][loot] = true: grabbed trolleys, kept looking empty (see KeepTrolleyEmpty)
 
+-- The key that stops a grab (TOB.StopGrabKey, G by default), nil = can't stop. Not X any more: QBCore's
+-- qb-smallresources puts the hands up on X, so stopping a grab raised the hands too, and its hands-down
+-- doesn't free every control it blocked (no driving or shooting until a restart, QBCore test). G does
+-- nothing while grabbing (it's blocked then for other scripts; this one reads it anyway).
+local KEY_X, KEY_G = 73, 47
+function StopGrabKey()
+    if TOB.StopGrabKey == nil then return KEY_G end
+    return tonumber(TOB.StopGrabKey)
+end
+
+-- The help text names the key that's used: the locales say ~INPUT_VEH_DUCK~ (X)
+local KEY_TOKENS = {[73] = "~INPUT_VEH_DUCK~", [47] = "~INPUT_DETONATE~", [38] = "~INPUT_PICKUP~",
+                    [74] = "~INPUT_VEH_HEADLIGHT~", [23] = "~INPUT_ENTER~", [44] = "~INPUT_COVER~"}
+function StopGrabText(key)
+    local text = L("stop_grab")
+    local token = KEY_TOKENS[key]
+    if token and token ~= KEY_TOKENS[KEY_X] then
+        text = text:gsub("~INPUT_VEH_DUCK~", token)
+    end
+    return text
+end
+
 -- The trolley at a spot, and its models: the kind this player expects first, then any other full
 -- trolley (the server may have spawned another kind, e.g. a cash trolley for gold on game builds
 -- without the gold models, or gold where this game fell back to cash). 0 when none is there.
@@ -295,6 +317,8 @@ function StartGrab(bank, trolleyCoords, kind)
 
     -- Grab for TOB.GrabTime seconds, or until the server says the trolley is empty. TOB.StopGrabKey
     -- stops early; the loot counter shows what's in the bag.
+    local stopKey = StopGrabKey()
+    local stopText = stopKey and StopGrabText(stopKey)
     local grabEnd = GetGameTimer() + grabMs
     local nextAsk = GetGameTimer() + PAY_ASK_EVERY
     while GetGameTimer() < grabEnd and not TrolleyEmptied do
@@ -306,9 +330,9 @@ function StartGrab(bank, trolleyCoords, kind)
             nextAsk = GetGameTimer() + PAY_ASK_EVERY
             TriggerServerEvent("tobsbank:rewardCash")
         end
-        if TOB.StopGrabKey then
-            ShowHelp(L("stop_grab"))
-            if IsDisabledControlJustPressed(0, TOB.StopGrabKey) then break end
+        if stopKey then
+            ShowHelp(stopText)
+            if IsDisabledControlJustPressed(0, stopKey) then break end
         end
         if TOB.LootCounter then
             DrawCounter(GrabbedItems > 0 and ("%dx %s"):format(GrabbedItems, GrabbedItemLabel or "") or ("$" .. Money(GrabbedNow)))
