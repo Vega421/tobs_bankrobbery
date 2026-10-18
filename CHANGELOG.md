@@ -4,7 +4,7 @@ All notable changes to tobs_bankrobbery. Each version is also a [GitHub release]
 
 Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
-## 1.0.1 · not released yet
+## 1.0.1 · 2026-10-18
 
 Fixes from playing 1.0.0 on the Qbox test server, and the first test on a live QBCore server (qb-inventory, qb-target, qb-doorlock, without ox_lib or ox_target): Paleto and the Fleeca banks work there now.
 
