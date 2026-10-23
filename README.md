@@ -37,7 +37,7 @@ Hack the security panel, open the vault, get through the inner gate and empty th
 ## Install
 
 1. Download the zip from [Releases](https://github.com/Vega421/tobs_bankrobbery/releases/latest) and unzip it into `resources/`.
-2. Add the items for your inventory from the `install/` folder (`esx.sql`, `ox_inventory.lua` or `qb-core.lua`), and the images in `install/images/` to your inventory's image folder.
+2. Add the items for your inventory from the `install/` folder (`ox_inventory.lua` or `qb-core.lua`), and the images in `install/images/` to your inventory's image folder.
 3. Set your police job (`TOB.PoliceJob`) in `config/config.lua`.
 4. Add `ensure tobs_bankrobbery` to `server.cfg` below your framework (and below tobs_minigames, if you use it).
 5. Give admins the commands in `server.cfg`: `add_ace group.admin command.tobreset allow`, and the same for `tobpause`, `tobtest` and `tobcheck`.

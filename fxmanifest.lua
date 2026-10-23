@@ -3,8 +3,8 @@ game "gta5"
 lua54 "yes"
 
 author "Vega"
-description "Paleto and Fleeca bank heists for Qbox, ESX and QBCore"
-version "1.0.1"
+description "Paleto and Fleeca bank heists for Qbox and QBCore"
+version "1.0.2"
 repository "https://github.com/Vega421/tobs_bankrobbery"
 
 -- Minigames per bank (played with tobs_minigames when it runs), admin tools (/tobpause, /tobtest,
@@ -29,12 +29,12 @@ shared_scripts {
     "config/banks.lua",
     "locales/locales.lua",
     "bridge/framework.lua",
+    "shared/frameworks.lua", -- Qbox and QBCore only: any other framework the bridge finds is turned away
     "bridge/shared/callbacks.lua",
 }
 
 client_scripts {
     "bridge/qbox/client.lua",
-    "bridge/esx/client.lua",
     "bridge/qb/client.lua",
     "bridge/shared/ui.lua",
     "bridge/shared/notify.lua",
@@ -54,8 +54,6 @@ server_scripts {
     "bridge/qbox/core.lua",
     "bridge/qbox/data.lua",
     "bridge/qb/core.lua",
-    "bridge/esx/core.lua",
-    "bridge/esx/data.lua",
     "server/util.lua",
     "server/heist.lua",
     "server/loot.lua",

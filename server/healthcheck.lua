@@ -19,11 +19,6 @@ function ItemExists(name)
             local QBCore = exports["qb-core"]:GetCoreObject()
             return QBCore.Shared.Items[name] ~= nil or QBCore.Shared.Items[name:lower()] ~= nil
         end
-        if Framework == "esx" then
-            local items = exports["es_extended"]:getSharedObject().GetItems()
-            if next(items) == nil then return nil end -- not loaded from the database yet
-            return items[name] ~= nil
-        end
         return nil
     end)
     if not ok then return nil end
@@ -45,7 +40,7 @@ local function ConfiguredItems()
     add(TOB.GateItem, "TOB.GateItem")
     add(TOB.RewardItem, "TOB.RewardItem")
     if TOB.MarkedBills then add(TOB.MarkedBillsItem or "markedbills", "TOB.MarkedBillsItem") end
-    if TOB.black and Framework ~= "esx" then add(BlackMoneyItem(), "dirty money (TOB.blackmoney)") end
+    if TOB.black then add(BlackMoneyItem(), "dirty money (TOB.blackmoney)") end
     for _, r in ipairs(TOB.DrillRewards or {}) do
         if r.type == "item" then add(r.name, "TOB.DrillRewards") end
     end
@@ -66,7 +61,7 @@ function HealthCheck()
     local function note(text) notes[#notes + 1] = text end
 
     if Framework == nil then
-        problem("No framework found. Start qbx_core, es_extended or qb-core before this resource, or set TOB.Framework.")
+        problem("No framework found. Start qbx_core or qb-core before this resource, or set TOB.Framework.")
     end
     if GetConvar("onesync", "off") == "off" then
         problem("OneSync is off: the server can't check where players are. Add 'set onesync on' to server.cfg.")

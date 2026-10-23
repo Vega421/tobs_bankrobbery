@@ -1,6 +1,6 @@
 TOB = {}
 
--- Framework: "auto" (detects qbx_core, es_extended or qb-core), "qbox", "esx" or "qb"
+-- Framework: "auto" (detects qbx_core or qb-core), "qbox" or "qb"
 TOB.Framework = "auto"
 
 -- Language: "en" (English), "da" (Danish), "de" (German), "sv" (Swedish), "no" (Norwegian), "nl" (Dutch),
@@ -9,7 +9,7 @@ TOB.Framework = "auto"
 TOB.Locale = "en"
 
 -- Police
-TOB.PoliceJob = "police" -- ESX / QBCore / Qbox job that counts as police. Several jobs: {"police", "sheriff"}
+TOB.PoliceJob = "police" -- QBCore / Qbox job that counts as police. Several jobs: {"police", "sheriff"}
 TOB.PoliceOnDuty = true -- QBCore / Qbox: only count officers who are on duty
 
 -- Heist
@@ -51,7 +51,7 @@ TOB.GateHackTime = 10000 -- milliseconds opening the gate takes after its miniga
 -- Rewards. A full trolley pays TOB.TrolleyCash; stopping early pays for the time spent grabbing.
 TOB.TrolleyCash = {min = 50000, max = 80000} -- cash in one full trolley (3 trolleys per heist)
 TOB.GrabTime = 37 -- seconds it takes to empty a trolley (the grab animation is played at the speed that matches)
-TOB.black = false -- true pays dirty money instead of cash (ESX: the black_money account, others: the TOB.blackmoney item)
+TOB.black = false -- true pays dirty money instead of cash (the TOB.blackmoney item)
 TOB.blackmoney = "auto" -- dirty money item: "auto" = "black_money" (QBCore / Qbox)
 TOB.RewardItem = "" -- give this item instead of money, e.g. "markedbills". "" = pay money
 TOB.RewardItemCount = "cash" -- "cash" = item count equals the cash amount (money-like items), or the number of items in a full trolley (e.g. 10 bags)
@@ -130,7 +130,7 @@ TOB.DrillRewards = {
 TOB.Target = "auto" -- "auto" (ox_target if running, else qb-target, else press E), "ox_target", "qb-target" or "none" (always press E)
 TOB.Prompts = "auto" -- "press E" prompts: "auto" (ox_lib text UI if running, otherwise 3D text), "ox_lib" or "3d"
 TOB.Progress = "auto" -- "auto" (ox_lib, else QBCore's progressbar, else progressBars, else no bar), "ox_lib", "progressbar", "progressBars" or "none"
-TOB.Notify = "auto" -- "auto", "ox_lib", "mythic_notify", "framework" (ESX / QBCore notifications) or "native". "auto" uses ox_lib, then mythic_notify, then the framework's
+TOB.Notify = "auto" -- "auto", "ox_lib", "mythic_notify", "framework" (Qbox / QBCore notifications) or "native". "auto" uses ox_lib, then mythic_notify, then the framework's
 TOB.NotifyTitle = "Bank Robbery" -- title shown on ox_lib notifications
 TOB.CoordsCommand = "bankcoords" -- prints your position (for adding banks) in chat and the F8 console. false = off
 

@@ -1,4 +1,4 @@
--- ox_inventory (Qbox, or ESX / QBCore with ox_inventory): add these to ox_inventory/data/items.lua.
+-- ox_inventory (Qbox, or QBCore with ox_inventory): add these to ox_inventory/data/items.lua.
 -- id_card_f starts a heist. drill opens the deposit boxes (TOB.DrillItem, set it to "" if you don't want an item).
 -- Only add secure_card / thermite if you use TOB.GateItem / TOB.VaultItem.
 -- goldbar / diamond are what the gold and diamond trolleys pay (TOB.SpecialTrolleys; skip them if you set

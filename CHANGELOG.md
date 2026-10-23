@@ -4,6 +4,10 @@ All notable changes to tobs_bankrobbery. Each version is also a [GitHub release]
 
 Full documentation: https://vega421.github.io/scripts/tobs-bankrobbery/
 
+## 1.0.2 · 2026-10-23
+
+- **Qbox and QBCore only.** ESX was never tested on a live server, so it's no longer loaded: the manifest skips the ESX bridge files (they stay in `bridge/`, which is shared with the other tobs_ scripts), and `install/esx.sql` and the ESX parts of the health check and notifications are gone. An ESX server now gets a clear "doesn't support esx" message at start. ESX support may come back in a later update
+
 ## 1.0.1 · 2026-10-18
 
 Fixes from playing 1.0.0 on the Qbox test server, and the first test on a live QBCore server (qb-inventory, qb-target, qb-doorlock, without ox_lib or ox_target): Paleto and the Fleeca banks work there now.

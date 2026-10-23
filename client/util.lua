@@ -39,7 +39,7 @@ function Notify(ntype, msg, duration)
         TriggerEvent("ox_lib:notify", {title = TOB.NotifyTitle, description = msg, type = ntype, duration = duration})
     elseif mode == "mythic_notify" then
         exports["mythic_notify"]:SendAlert(ntype == "warning" and "error" or ntype, msg, duration)
-    elseif mode == "esx" or mode == "framework" then
+    elseif mode == "framework" then
         Bridge.FrameworkNotify(msg, ntype)
     else
         BeginTextCommandThefeedPost("STRING")
