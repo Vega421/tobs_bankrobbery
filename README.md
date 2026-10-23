@@ -2,7 +2,7 @@
 
 # tobs_bankrobbery
 
-**Paleto and Fleeca bank heists for FiveM: Qbox, ESX and QBCore in one resource**
+**Paleto and Fleeca bank heists for FiveM: Qbox and QBCore in one resource**
 
 [![Release](https://img.shields.io/github/v/release/Vega421/tobs_bankrobbery?style=flat-square&color=ff6b2c&label=release)](https://github.com/Vega421/tobs_bankrobbery/releases/latest)
 [![License](https://img.shields.io/github/license/Vega421/tobs_bankrobbery?style=flat-square)](LICENSE)
@@ -18,7 +18,7 @@ Hack the security panel, open the vault, get through the inner gate and empty th
 
 ## Features
 
-- Works on **Qbox, ESX and QBCore**: the framework is detected automatically
+- Works on **Qbox and QBCore**: the framework is detected automatically
 - Paleto Bay plus all 6 Fleeca banks
 - Laptop hack, an inner gate to open (thermite by default), bank alarm and drillable deposit boxes
 - Cash trolleys, and sometimes a gold or diamond trolley behind the inner gate that pays gold bars or diamonds, with a live loot counter
@@ -44,7 +44,7 @@ Hack the security panel, open the vault, get through the inner gate and empty th
 
 See the [installation guide](https://vega421.github.io/scripts/tobs-bankrobbery/installation/) for details.
 
-**Requires:** one of qbx_core, es_extended or qb-core · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) or qb-target (optional) · [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional)
+**Requires:** one of qbx_core or qb-core · [ox_lib](https://github.com/overextended/ox_lib) (recommended, included with Qbox) · [ox_target](https://github.com/overextended/ox_target) or qb-target (optional) · [tobs_minigames](https://github.com/Vega421/tobs_minigames) (optional)
 
 ## Development
 
